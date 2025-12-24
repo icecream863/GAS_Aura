@@ -1,0 +1,9 @@
+﻿Binaries/
+Intermediate/
+Saved/
+DerivedDataCache/
+Build/
+.idea/
+*.sln
+*.suo
+Plugins/Developer/RiderLink/
