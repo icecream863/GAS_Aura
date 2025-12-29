@@ -20,9 +20,11 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	
+	/** EnemyInterface */
 	virtual void HighLightActor() override;
 	virtual void UnHighLightActor() override;
+	/** End EnemyInterface */
 	
-	
+
 	
 };
