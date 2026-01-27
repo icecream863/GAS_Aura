@@ -38,6 +38,7 @@ void UAuraAttributeSet::OnRep_Mana(const FGameplayAttributeData& OldHealth) cons
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UAuraAttributeSet, Mana, OldHealth);
 }
 
+// 属性复制回调：当 MaxMana 在网络上被复制到本地时调用。
 void UAuraAttributeSet::OnRep_MaxMana(const FGameplayAttributeData& OldHealth) const
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UAuraAttributeSet, MaxMana, OldHealth);
