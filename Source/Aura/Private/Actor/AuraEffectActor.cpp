@@ -27,9 +27,13 @@ void AAuraEffectActor::OnOverLap(UPrimitiveComponent* OverlappedComponent,
 	//~ 在父类实现了 接口
 	if (IAbilitySystemInterface* ASCInterface = Cast<IAbilitySystemInterface>(OtherActor))
 	{
-		const UAuraAttributeSet* AuraAttributeSet = Cast<UAuraAttributeSet>(ASCInterface->GetAbilitySystemComponent()->GetAttributeSet(UAuraAttributeSet::StaticClass()));
+		const UAuraAttributeSet* AuraAttributeSet = Cast<UAuraAttributeSet>(
+			ASCInterface->GetAbilitySystemComponent()->GetAttributeSet(UAuraAttributeSet::StaticClass()));
+		
 		UAuraAttributeSet* MutableAuraAttributeSet = const_cast<UAuraAttributeSet*>(AuraAttributeSet);
 		MutableAuraAttributeSet->SetHealth(MutableAuraAttributeSet->GetHealth() + 25.f);
+		MutableAuraAttributeSet->SetMana(MutableAuraAttributeSet->GetMana() - 25.f);
+		
 		Destroy();
 	}
 }

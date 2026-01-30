@@ -36,8 +36,8 @@ private:
 	
 	void Move(const struct FInputActionValue& InputActinValue);
 	void CursorTrace();
-	
-	UPROPERTY(EditAnywhere, Category = "Input")
+		UPROPERTY(EditAnywhere, Category = "Input")
+
 	float DeadZone = 0.15f;
 	
 	IEnemyInterface* ThisActor;

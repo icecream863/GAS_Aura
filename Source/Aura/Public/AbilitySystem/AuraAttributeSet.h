@@ -25,6 +25,7 @@ class AURA_API UAuraAttributeSet : public UAttributeSet
 	GENERATED_BODY()
 	
 public:
+	
 	UAuraAttributeSet();
 	
 	//~ 注册复制名单 

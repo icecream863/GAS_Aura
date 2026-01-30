@@ -23,7 +23,7 @@ protected:
 	UPROPERTY(BlueprintReadOnly)
 	TObjectPtr<UObject> WidgetController;
 	
-	//~ c++调用， 蓝图实现
+	//~ c++调用， 蓝图实现, 这是一个事件
 	UFUNCTION(BlueprintImplementableEvent)
 	void WidgetControllerSet();
 	
