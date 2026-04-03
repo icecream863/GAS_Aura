@@ -5,6 +5,7 @@
 
 #include "AbilitySystem/AuraAbilitySystemComponent.h"
 #include "AbilitySystem/AuraAttributeSet.h"
+#include "Net/UnrealNetwork.h"
 
 AAuraPlayerState::AAuraPlayerState()
 {
@@ -22,4 +23,19 @@ AAuraPlayerState::AAuraPlayerState()
 UAbilitySystemComponent* AAuraPlayerState::GetAbilitySystemComponent() const
 {
 	return AbilitySystemComponent;
+}
+
+
+
+void AAuraPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	
+	DOREPLIFETIME(AAuraPlayerState, Level);
+}
+
+void AAuraPlayerState::OnRep_Level(const int32 OldLevel)
+{
+	// Level 变化时可以在这里做一些客户端的表现更新，例如播放升级特效、刷新 UI 等。
+	// 注意：服务器本地修改 Level 不会自动触发 OnRep_Level（需要手动调用或走 ASC 的通知）。
 }

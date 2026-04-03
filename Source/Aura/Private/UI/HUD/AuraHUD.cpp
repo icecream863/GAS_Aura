@@ -4,6 +4,7 @@
 #include "UI/HUD/AuraHUD.h"
 
 #include "UI/Widget/AuraUserWidget.h" 
+#include "UI/WidgetController/AttributeMenuWidgetController.h"
 #include "UI/WidgetController/OverlayWidgetController.h"
 
 
@@ -11,6 +12,7 @@ UOverlayWidgetController* AAuraHUD::GetOverlayWidgetController(const FWidgetCont
 {
 	if (OverlayWidgetController == nullptr)
 	{
+		//~ 这里的创建方式是 NewObject，因为 WidgetController 是一个 UObject，而不是 Actor 或 Component；如果是 Actor 或 Component，应该用 SpawnActor 或 CreateDefaultSubobject。
 		OverlayWidgetController = NewObject<UOverlayWidgetController>(this, OverlayWidgetControllerClass);
 		OverlayWidgetController->SetWidgetControllerParams(WCParams);
 		
@@ -22,6 +24,22 @@ UOverlayWidgetController* AAuraHUD::GetOverlayWidgetController(const FWidgetCont
 		return OverlayWidgetController;
 	}
 	
+}
+
+UAttributeMenuWidgetController* AAuraHUD::GetAttributeMenuWidgetController(const FWidgetControllerParams& WCParams)
+{
+	if (AttributeMenuWidgetController == nullptr)
+	{
+		AttributeMenuWidgetController = NewObject<UAttributeMenuWidgetController>(this, AttributeMenuWidgetControllerClass);
+		AttributeMenuWidgetController->SetWidgetControllerParams(WCParams);
+		
+		AttributeMenuWidgetController->BindCallbacksToDependencies();//~ 绑定回调，把 ASC/属性变化转为 UI 事件
+		return AttributeMenuWidgetController;
+	}
+	else
+	{
+		return AttributeMenuWidgetController;
+	}
 }
 
 void AAuraHUD::InitOverlay(APlayerState* PS, APlayerController* PC, UAbilitySystemComponent* ASC, UAttributeSet* AS)

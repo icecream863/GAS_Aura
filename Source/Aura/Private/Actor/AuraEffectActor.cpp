@@ -1,54 +1,110 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 #include "Actor/AuraEffectActor.h"
-#include "Components/SphereComponent.h"
-
-
+#include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponent.h"
-#include "AbilitySystemInterface.h"
-#include "AbilitySystem/AuraAttributeSet.h"
+#include "ActiveGameplayEffectHandle.h"
+
 
 // Sets default values
 AAuraEffectActor::AAuraEffectActor()
 {
 	PrimaryActorTick.bCanEverTick = false;
-
-	Mesh = CreateDefaultSubobject<UStaticMeshComponent>("Mesh");
-	SetRootComponent(Mesh);
-
-	Sphere = CreateDefaultSubobject<USphereComponent>("Sphere");
-	Sphere->SetupAttachment(Mesh);
-}
-
-void AAuraEffectActor::OnOverLap(UPrimitiveComponent* OverlappedComponent,
-                                 AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex,
-                                 bool bFromSweep,
-                                 const FHitResult& SweepResult)
-{
-	//~ 在父类实现了 接口
-	if (IAbilitySystemInterface* ASCInterface = Cast<IAbilitySystemInterface>(OtherActor))
-	{
-		const UAuraAttributeSet* AuraAttributeSet = Cast<UAuraAttributeSet>(
-			ASCInterface->GetAbilitySystemComponent()->GetAttributeSet(UAuraAttributeSet::StaticClass()));
-		
-		UAuraAttributeSet* MutableAuraAttributeSet = const_cast<UAuraAttributeSet*>(AuraAttributeSet);
-		MutableAuraAttributeSet->SetHealth(MutableAuraAttributeSet->GetHealth() + 25.f);
-		MutableAuraAttributeSet->SetMana(MutableAuraAttributeSet->GetMana() - 25.f);
-		
-		Destroy();
-	}
-}
-
-
-void AAuraEffectActor::EndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
-                                  UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
-{
+	
+	SetRootComponent( CreateDefaultSubobject<USceneComponent>("SceneRoot") );
 	
 }
+
 
 void AAuraEffectActor::BeginPlay()
 {
 	Super::BeginPlay();
 
-	Sphere->OnComponentBeginOverlap.AddDynamic(this, &AAuraEffectActor::OnOverLap);
-	Sphere->OnComponentEndOverlap.AddDynamic(this, &AAuraEffectActor::EndOverlap);
+	
+}
+
+void AAuraEffectActor::ApplyEffectToTarget(AActor* TargetActor, TSubclassOf<UGameplayEffect> GameplayEffectClass)
+{
+	//1. 用IAbilitySystemInterface接口
+	
+	// IAbilitySystemInterface* AbilitySystemInterface =  Cast<IAbilitySystemInterface>(Target);
+	// if (AbilitySystemInterface)
+	// {
+	// 	UAbilitySystemComponent* ASC = AbilitySystemInterface->GetAbilitySystemComponent();
+	// }
+	
+	// 2. 用gas的函数库，即便没有继承 IAbilitySystemInterface接口，蓝图中也可以使用
+	UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(TargetActor);
+	if (TargetASC == nullptr) return;
+	check(GameplayEffectClass);
+	
+	FGameplayEffectContextHandle EffectContextHandle = TargetASC->MakeEffectContext();
+	EffectContextHandle.AddSourceObject(this);
+	const FGameplayEffectSpecHandle EffectSpecHandle = TargetASC->MakeOutgoingSpec(GameplayEffectClass, ActorLevel, EffectContextHandle);
+	const FActiveGameplayEffectHandle ActiveGameplayEffectHandle = TargetASC->ApplyGameplayEffectSpecToSelf(*EffectSpecHandle.Data.Get());
+	
+	const bool bIsInfinite =  EffectSpecHandle.Data.Get()->Def.Get()->DurationPolicy == EGameplayEffectDurationType::Infinite;
+	
+	if (bIsInfinite && InfiniteEffectRemovalPolicy == EEffectRemovalPolicy::RemoveOnEndOverlap)
+	{
+		ActiveEffectHandles.Add(ActiveGameplayEffectHandle, TargetASC); // 存了 这个GE,施加给了谁 ,谁施加，谁移除
+		//~ 同一 GE, 可能有不同ActiveGameplayEffectHandle， 对应 一个TargetASC，
+		//~ TargetASC可能对应不同ActiveGameplayEffectHandle
+	}
+	
+}
+
+void AAuraEffectActor::OnOverlap(AActor* TargetActor)
+{
+	if (InstantEffectApplicationPolicy == EEffectApplicationPolicy::ApplyOnOverlap)
+	{
+		ApplyEffectToTarget(TargetActor, InstantGameplayEffectClass);
+	}
+	
+	if (DurationEffectApplicationPolicy == EEffectApplicationPolicy::ApplyOnOverlap)
+	{
+		ApplyEffectToTarget(TargetActor, DurationGameplayEffectClass);
+	}
+	
+	if (InfiniteEffectApplicationPolicy == EEffectApplicationPolicy::ApplyOnOverlap)
+	{
+		ApplyEffectToTarget(TargetActor, InfiniteGameplayEffectClass);
+	}
+}
+
+void AAuraEffectActor::OnEndOverlap(AActor* TargetActor)
+{
+	if (InstantEffectApplicationPolicy == EEffectApplicationPolicy::ApplyOnEndOverlap)
+	{
+		ApplyEffectToTarget(TargetActor, InstantGameplayEffectClass);
+	}
+	
+	if (DurationEffectApplicationPolicy == EEffectApplicationPolicy::ApplyOnEndOverlap)
+	{
+		ApplyEffectToTarget(TargetActor, DurationGameplayEffectClass);
+	}
+	
+	if (InfiniteEffectApplicationPolicy == EEffectApplicationPolicy::ApplyOnEndOverlap)
+	{
+		ApplyEffectToTarget(TargetActor, InfiniteGameplayEffectClass);
+	}
+	
+	if (InfiniteEffectRemovalPolicy == EEffectRemovalPolicy::RemoveOnEndOverlap)
+	{
+		UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(TargetActor);
+		if (!TargetASC) return;
+		
+		for (auto it = ActiveEffectHandles.CreateIterator(); it; ++it)
+		{
+			if (it.Value() == TargetASC)
+			{
+				TargetASC->RemoveActiveGameplayEffect(it.Key(), 1);
+				it.RemoveCurrent();//也可以 先遍历存起来，再删，
+				//遍历是因为 1.多个targetActor， 2.一个targetActor可能对应多个key
+			}
+		}
+		
+		
+	}
+	
+	
 }

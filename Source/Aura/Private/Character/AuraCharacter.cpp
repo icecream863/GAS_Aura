@@ -4,6 +4,7 @@
 #include "Character/AuraCharacter.h"
 
 #include "AbilitySystemComponent.h"
+#include "AbilitySystem/AuraAbilitySystemComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Player/AuraPlayerController.h"
 #include "Player/AuraPlayerState.h"
@@ -32,6 +33,7 @@ void AAuraCharacter::InitAbilityActorInfo()
 	AAuraPlayerState* AuraPlayerState = GetPlayerState<AAuraPlayerState>();
 	check(AuraPlayerState);
 	AuraPlayerState->GetAbilitySystemComponent()->InitAbilityActorInfo(AuraPlayerState,this);
+	Cast<UAuraAbilitySystemComponent>(AuraPlayerState->GetAbilitySystemComponent())->AbilityActorInfoSet();
 	
 	AbilitySystemComponent = AuraPlayerState->GetAbilitySystemComponent();
 	AttributeSet = AuraPlayerState->GetAttributeSet();
@@ -42,9 +44,9 @@ void AAuraCharacter::InitAbilityActorInfo()
 		{
 			AuraHUD->InitOverlay(AuraPlayerState, AuraPlayerController, AbilitySystemComponent, AttributeSet);//参数在上面获取
 		}
-		
-		
 	}
+	
+	InitialDefaultAttributes();//初始化默认属性
 }
 
 
@@ -54,6 +56,8 @@ void AAuraCharacter::PossessedBy(AController* NewController)
 	
 	// Init Ability Actor Info for Server
 	InitAbilityActorInfo();
+	
+	AddCharacterAbilities();
 }
 
 void AAuraCharacter::OnRep_PlayerState()
@@ -62,4 +66,13 @@ void AAuraCharacter::OnRep_PlayerState()
 	
 	// Init Ability Actor Info for Client
 	InitAbilityActorInfo();
+}
+
+int32 AAuraCharacter::GetPlayerLevel()
+{
+	AAuraPlayerState* AuraPlayerState = GetPlayerState<AAuraPlayerState>();
+	check(AuraPlayerState);
+	
+	return AuraPlayerState->GetPlayerLevel();
+	
 }

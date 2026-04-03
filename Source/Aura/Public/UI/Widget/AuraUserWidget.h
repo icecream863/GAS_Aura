@@ -24,6 +24,7 @@ protected:
 	TObjectPtr<UObject> WidgetController;
 	
 	//~ c++调用， 蓝图实现, 这是一个事件
+	// 有作用域 只在overlay蓝图实现， 在mana和heal蓝图中不会实现，不共用
 	UFUNCTION(BlueprintImplementableEvent)
 	void WidgetControllerSet();
 	
