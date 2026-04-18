@@ -28,6 +28,8 @@ public:
 	//这是重载 IAbilitySystemInterface里的函数
 	
 	UAttributeSet* GetAttributeSet() const{ return AttributeSet; }
+	
+	virtual FVector GetCombatSocketLocation() override;
 
 protected:
 	
@@ -35,6 +37,10 @@ protected:
 	
 	UPROPERTY(EditAnywhere, Category = "Combat")
 	TObjectPtr<USkeletalMeshComponent> Weapon;
+	
+	UPROPERTY(EditAnywhere, Category = "Combat")
+	FName WeaponTipSocketName;
+	
 	
 	UPROPERTY()
 	TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
