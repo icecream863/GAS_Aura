@@ -5,6 +5,7 @@
 
 #include "AbilitySystemComponent.h"
 #include "AbilitySystem/AuraAbilitySystemComponent.h"
+#include "Components/CapsuleComponent.h"
 
 // Sets default values
 AAuraCharacterBase::AAuraCharacterBase()
@@ -15,6 +16,16 @@ AAuraCharacterBase::AAuraCharacterBase()
 	Weapon = CreateDefaultSubobject<USkeletalMeshComponent>(FName("Weapon") );
 	Weapon->SetupAttachment(GetMesh(), FName("WeaponHandSocket"));
 	Weapon->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	
+	GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
+	GetMesh()->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
+	/** 
+	* ECC = `ECollisionChannel`（碰撞通道，*Collision Channel*）
+	用来表示“你在和哪一类对象/用途进行碰撞查询或响应”。
+	例如：ECC_Camera 表示相机通道（相机的碰撞/遮挡检测常用这个通道）。
+	ECR = `ECollisionResponse`（碰撞响应，*Collision Response*）
+	用来表示“对这个通道要怎么响应”。常见有：
+	*/
 }
 
 UAbilitySystemComponent* AAuraCharacterBase::GetAbilitySystemComponent() const

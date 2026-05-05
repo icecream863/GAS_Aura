@@ -21,6 +21,11 @@ public:
 	void BindAbilityActions(const UAuraInputConfig* AuraInputConfig, UserClass* Object, PressedFuncType PressedFunc, ReleasedFuncType ReleasedFunc, HeldFuncType HeldFunc);
 };
 
+// 说明：上面的 BindAbilityActions\(\) 是一个模板辅助函数，用于把 `UAuraInputConfig` 里配置的 Ability 输入动作批量绑定到回调上。
+// \- PressedFunc 绑定 `ETriggerEvent::Started`\(\)：按下开始触发，并把对应的 `InputTag` 作为额外参数传入回调。
+// \- ReleasedFunc 绑定 `ETriggerEvent::Completed`\(\)：松开时触发，同样传入 `InputTag`。
+// \- HeldFunc 绑定 `ETriggerEvent::Triggered`\(\)：按住/持续触发（通常每帧或按触发规则触发），并传入 `InputTag`。
+// 这样可以在同一个回调函数里通过 `InputTag` 区分是哪一个技能/输入动作触发的。
 template <class UserClass, typename PressedFuncType, typename ReleasedFuncType, typename HeldFuncType>
 void UAuraEnhancedInputComponent::BindAbilityActions(const UAuraInputConfig* InputConfig, UserClass* Object,
 	PressedFuncType PressedFunc, ReleasedFuncType ReleasedFunc, HeldFuncType HeldFunc)

@@ -54,6 +54,8 @@ void AAuraPlayerController::SetupInputComponent()
 	UAuraEnhancedInputComponent* AuraEnhancedInputComponent = CastChecked<UAuraEnhancedInputComponent>(InputComponent);
 	
 	AuraEnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AAuraPlayerController::Move);
+	AuraEnhancedInputComponent->BindAction(ShiftAction, ETriggerEvent::Started, this, &AAuraPlayerController::ShiftPressed);
+	AuraEnhancedInputComponent->BindAction(ShiftAction, ETriggerEvent::Completed, this, &AAuraPlayerController::ShiftReleased);
 	
 	AuraEnhancedInputComponent->BindAbilityActions(InputConfig, this, &ThisClass::AbilityInputTagPressed, &ThisClass::AbilityInputTagReleased, &ThisClass::AbilityInputTagHeld);
 	//加&是因为函数指针需要传递函数地址，而不是调用函数。
@@ -99,6 +101,7 @@ void AAuraPlayerController::CursorTrace()
 	if (ThisActor) ThisActor->HighLightActor();
 }
 
+//Pressed更多是\“开始记录状态\”，Held/Released才是\“根据最终意图执行\”。这样才能同时兼容点击移动、按住跟随、以及对目标释放技能这几种行为而不冲突。
 void AAuraPlayerController::AbilityInputTagPressed(FGameplayTag InputTag)
 {
 	if (InputTag.MatchesTagExact(FAuraGameplayTags::Get().InputTag_LMB))
@@ -119,14 +122,10 @@ void AAuraPlayerController::AbilityInputTagReleased( FGameplayTag InputTag)
 		return;
 	}
 	
-	if (bTargeting)
-	{
-		if (GetASC())
-		{
-			GetASC()->AbilityInputTagReleased(InputTag);
-		}
-	}
-	else
+	//只要不是点击移动，其他技能的释放都直接通知 GAS 就好，只有点击移动才区分短按长按。
+	if (GetASC())	GetASC()->AbilityInputTagReleased(InputTag);
+	
+	if (!bTargeting && !bShiftKeyDown)
 	{
 		if (FollowTime < ShortPressThreshold)
 		{
@@ -145,11 +144,14 @@ void AAuraPlayerController::AbilityInputTagReleased( FGameplayTag InputTag)
 			
 			bAutoRunning = true;
 		}
+		FollowTime = 0.f;
+		bTargeting = false;
 	}
-	FollowTime = 0.f;
-	bTargeting = false;
 }
 
+	
+
+// 真正释放技能的地方，
 void AAuraPlayerController::AbilityInputTagHeld(FGameplayTag InputTag)
 {
 	if (!InputTag.MatchesTagExact(FAuraGameplayTags::Get().InputTag_LMB))
@@ -161,14 +163,14 @@ void AAuraPlayerController::AbilityInputTagHeld(FGameplayTag InputTag)
 		return;
 	}
 	
-	if (bTargeting)
+	if (bTargeting || bShiftKeyDown)
 	{
 		if (GetASC())
 		{
 			GetASC()->AbilityInputTagHeld(InputTag);
 		}
 	}
-	else
+	else //导航
 	{
 		FollowTime += GetWorld()->GetDeltaSeconds();
 		

@@ -29,7 +29,9 @@ void UAuraAbilitySystemComponent::AbilityInputTagHeld(const FGameplayTag& InputT
 	{
 		if (AbilitySpec.DynamicAbilityTags.HasTagExact(InputTag))
 		{	
+			// 通知 Spec 键位被按下
 			AbilitySpecInputPressed(AbilitySpec);
+			// 如果技能还没激活，尝试激活它
 			if (!AbilitySpec.IsActive())
 			{
 				TryActivateAbility(AbilitySpec.Handle);
@@ -46,10 +48,9 @@ void UAuraAbilitySystemComponent::AbilityInputTagReleased(const FGameplayTag& In
 	{
 		if (AbilitySpec.DynamicAbilityTags.HasTagExact(InputTag))
 		{
-			if (!AbilitySpec.IsActive())
-			{
+				// 无论技能是否正在运行，都应该通知“松开”事件
 				AbilitySpecInputReleased(AbilitySpec);
-			}
+			
 		}
 	}
 }
