@@ -3,11 +3,14 @@
 
 #include "AbilitySystem/Abilities/AuraProjectileSpell.h"
 
+#include "AbilitySystemBlueprintLibrary.h"
+#include "AbilitySystemComponent.h"
 #include "Actor/AuraProjectile.h"
 #include "Interaction/CombatInterface.h"
 #include "Kismet/KismetMathLibrary.h"
 
 #include "Kismet/KismetSystemLibrary.h"
+#include "LevelInstance/LevelInstanceTypes.h"
 
 void UAuraProjectileSpell::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
                                            const FGameplayAbilityActorInfo* ActorInfo, 
@@ -42,9 +45,20 @@ void UAuraProjectileSpell::SpwanProjectile(const FVector& ProjectileTargetLocati
 			GetOwningActorFromActorInfo(), 
 			Cast<APawn>(GetAvatarActorFromActorInfo()),
 			ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
-		// owing 拥有者(playerState) Avatar 化身(character) Instigator 发起人
-		//SpawnActorDeferred 先生成一个Actor实例，但不立即激活它。这样你就可以在它被激活之前对它进行一些设置，例如设置属性或者调用函数。最后需要调用 FinishSpawning 来完成生成过程。
-		// 延迟化生成
+		
+		UAbilitySystemComponent* SourceASC =  UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(GetAvatarActorFromActorInfo());
+		FGameplayEffectSpecHandle EffectSpecHandle = SourceASC->MakeOutgoingSpec(DamageEffectClass, GetAbilityLevel(), SourceASC->MakeEffectContext());
+		AuraProjectile->DamageEffectSpecHandle = EffectSpecHandle;
+		/**
+		 *这三行在获取施法者的 AbilitySystemComponent，基于 `DamageEffectClass` 和当前技能等级创建一个 `FGameplayEffectSpecHandle`
+		 *，并把该效果规格保存到投射物上，供命中时应用伤害效果。
+		 */
+		
+		/** owing 拥有者(playerState) Avatar 化身(character) Instigator 发起人
+		//SpawnActorDeferred 先生成一个Actor实例，但不立即激活它。这样你就可以在它被激活之前对它进行一些设置，
+		例如设置属性或者调用函数。最后需要调用 FinishSpawning 来完成生成过程。
+		* 延迟化生成
+		*/
 		AuraProjectile->FinishSpawning(SpawnTransform);// 完成生成过程，激活Actor
 	
 	}

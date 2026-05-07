@@ -46,10 +46,11 @@ struct FEffectProperties
 	UAbilitySystemComponent* SourceASC = nullptr;
 	
 	UPROPERTY()
-	AActor* SourceAvatarActor = nullptr;// SourceASC 的 AvatarActor（通常是 Pawn/Character）; 有了它就能拿到更多信息（例如 Controller）。
+	AActor* SourceAvatarActor = nullptr;
+	/** SourceASC 的 AvatarActor（通常是 Pawn/Character）; 有了它就能拿到更多信息（例如 Controller）。
 	//`OwnerActor`：ASC 的拥有者（可能是 `PlayerState`、`Character` 等，用于生命周期/网络等）。
 	//`AvatarActor`：ASC 当前操控/映射到的那个“肉身”（Pawn/Character）
-	
+	*/
 	UPROPERTY()
 	ACharacter* SourceCharacter = nullptr;
 	

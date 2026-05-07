@@ -18,6 +18,8 @@ class AURA_API UAuraUserWidget : public UUserWidget
 public:
 	UFUNCTION(BlueprintCallable)
 	void SetWidgetController(UObject* InWidgetController);
+	//这是一个公开的成员函数声明，用于接收一个 `UObject\*` 控制器并设置到该控件实例中，
+	//便于在蓝图或 C\+\+ 中关联和使用控制器逻辑
 	
 protected:
 	UPROPERTY(BlueprintReadOnly)

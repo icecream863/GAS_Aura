@@ -5,6 +5,7 @@
 
 #include "AbilitySystemComponent.h"
 #include "AbilitySystem/AuraAbilitySystemComponent.h"
+#include "Aura/Aura.h"
 #include "Components/CapsuleComponent.h"
 
 // Sets default values
@@ -19,6 +20,9 @@ AAuraCharacterBase::AAuraCharacterBase()
 	
 	GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
 	GetMesh()->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
+	GetMesh()->SetCollisionResponseToChannel(ECC_Projectile, ECR_Overlap);
+	GetMesh()->SetGenerateOverlapEvents(true);
+	
 	/** 
 	* ECC = `ECollisionChannel`（碰撞通道，*Collision Channel*）
 	用来表示“你在和哪一类对象/用途进行碰撞查询或响应”。
