@@ -31,7 +31,7 @@ public:
 	
 	UPROPERTY(BlueprintAssignable, Category = "GAS | Attributes")//~ BlueprintAssignable 允许在蓝图里绑定这个事件
 	FOnAttributeInfoSignature AttributeInfoDelegate;//~ 当属性信息发生变化时广播，界面可以绑定这个事件来更新显示
-	
+	 
 	
 protected:
 	UPROPERTY(EditDefaultsOnly)

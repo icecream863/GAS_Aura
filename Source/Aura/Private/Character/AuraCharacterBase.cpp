@@ -75,7 +75,7 @@ void AAuraCharacterBase::InitialDefaultAttributes() const
 	//顺序很重要
 }
 
-void AAuraCharacterBase::AddCharacterAbilities()
+void AAuraCharacterBase::AddCharacterAbilities() const
 {
 	if (!HasAuthority()) return;
 	// 只有服务器才会添加能力，客户端不需要添加能力，

@@ -30,10 +30,12 @@ public:
 	UAttributeSet* GetAttributeSet() const{ return AttributeSet; }
 	
 	virtual FVector GetCombatSocketLocation() override;
+	
+	virtual void BeginPlay() override;
 
 protected:
 	
-	virtual void BeginPlay() override;
+	
 	
 	UPROPERTY(EditAnywhere, Category = "Combat")
 	TObjectPtr<USkeletalMeshComponent> Weapon;
@@ -63,9 +65,9 @@ protected:
 	
 	void ApplyEffectToSelf(TSubclassOf<UGameplayEffect> GameplayEffectClass, float Level) const;
 	
-	void InitialDefaultAttributes() const;
+	virtual void InitialDefaultAttributes() const;
 	
-	void AddCharacterAbilities();
+	void AddCharacterAbilities() const;
 	
 private:
 	UPROPERTY(EditAnywhere, Category = "Abilities")

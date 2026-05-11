@@ -6,6 +6,7 @@
 #include "Character/AuraCharacterBase.h"
 #include "Interaction/EnemyInterface.h"
 #include "UI/WidgetController/OverlayWidgetController.h"
+#include "AbilitySystem/Data/CharacterClassInfo.h"
 #include "AuraEnemy.generated.h"
 
 class UWidgetComponent;
@@ -35,18 +36,23 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "GAS|Attributes")
 	FOnAttributeChangeSignature OnMaxHealthChanged;
 	
+	virtual void BeginPlay() override;
 	
 protected:
 	virtual void InitAbilityActorInfo() override;
+	virtual void InitialDefaultAttributes() const override;
 	
-	virtual void BeginPlay() override;
 	
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Character Class Default")
     int32 Level = 1;// 
+	
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Character Class Default")
+	ECharacterClass CharacterClass = ECharacterClass::Elementalist;//默认元素使
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Enemy | Widget")
 	TObjectPtr<UWidgetComponent> HealthBar;
 	//这个是 控件组件，需要自己在ue里设置 widgetClass
 
+	
 	
 };

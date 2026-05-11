@@ -28,14 +28,15 @@ public:
 	virtual int32 GetPlayerLevel() override;
 	/* End CombatInterface */
 	
-	
-protected:
 	// 角色开局初始化入口
 	virtual void BeginPlay() override;
 	
-private:
-	// 统一初始化 AbilityActorInfo，绑定 Owner/Avatar 到 ASC
+protected:
+	// 统一初始化 AbilityActorInfo，绑定 Owner/Avatar 到 ASC, 初始化默认属性
 	virtual void InitAbilityActorInfo() override;
+	
+private:
+	
 	
 	
 }; 
