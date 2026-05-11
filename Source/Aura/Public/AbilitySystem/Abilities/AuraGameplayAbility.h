@@ -17,4 +17,8 @@ class AURA_API UAuraGameplayAbility : public UGameplayAbility
 public:
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	FGameplayTag StartupInputTag;
+	
+	/**它用于表示一个可以随等级（例如技能等级、角色等级）动态缩放的浮点值。*/
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Damage")
+	FScalableFloat Damage;
 };

@@ -8,6 +8,7 @@
 
 #include "AuraPlayerController.generated.h"
 
+class UDamageTextComponent;
 class UAuraInputConfig;
 class IEnemyInterface;
 class UInputAction;
@@ -27,6 +28,9 @@ class AURA_API AAuraPlayerController : public APlayerController
 public:
 	AAuraPlayerController();
 	virtual void PlayerTick(float DeltaTime) override;
+
+	UFUNCTION(Client, Reliable)//服务端调用，客户端执行
+	void ShowDamageNumber(float DamageAmount, ACharacter* TargetCharacter);
 
 protected:
 	virtual void BeginPlay() override;
@@ -118,4 +122,7 @@ private:
 
 	/** 每帧沿Spline移动角色，到达CachedDestination容差范围内停止 */
 	void AutoRun();
+	
+	UPROPERTY(EditDefaultsOnly)
+	TSubclassOf<UDamageTextComponent> DamageTextComponentClass;
 };

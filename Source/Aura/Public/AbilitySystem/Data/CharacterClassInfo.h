@@ -16,6 +16,7 @@
  * 维护性和扩展性
  */
 
+
 /** 
  * 配置好DataAsset后，角色类可以通过引用这个DataAsset来获取职业相关的信息，例如在角色初始化时根据职业类型加载对应的属性加成和技能列表。
  * 这样就实现了职业信息的集中管理和灵活调整，方便后续添加新的职业或修改现有职业的特点，而不需要修改角色类的代码逻辑
@@ -23,6 +24,7 @@
  * 例如在角色选择界面显示不同职业的属性加成和技能描述，或者在角色状态界面显示当前职业的特点和能力
  */
 class UGameplayEffect;
+class UGameplayAbility;
 
 UENUM(BlueprintType)
 enum class ECharacterClass : uint8
@@ -57,6 +59,11 @@ public:
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Common Class DefaultInfo")
 	TSubclassOf<UGameplayEffect> SecondaryAttribute;
+	
+	/** TSubclassOf<UGameplayAbility> = 技能类/蓝图（用来做配置、做模板，知道要生成什么）。
+	UGameplayAbility* = 技能实例（真正在游戏里释放和计算冷却的具体对象，通常挂在角色的技能系统组件 ASC 里）。*/
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Common Class DefaultInfo")
+	TArray<TSubclassOf<UGameplayAbility>> CommonAbilities;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Common Class DefaultInfo")
 	TSubclassOf<UGameplayEffect> VitalAttribute;

@@ -177,6 +177,17 @@ public:
 	FGameplayAttributeData MaxMana;
 	ATTRIBUTE_ACCESSORS(UAuraAttributeSet, MaxMana);
 	
+	/**
+	 *	Meta Attribute
+		1. 处理伤害的临时缓冲：在受到攻击时，GameplayEffect (GE) 通常不会直接修改 Health（生命值），而是把基础伤害值赋予给 IncomingDamage 这个元属性。 
+		2. 支持复杂的结算逻辑：当带有 IncomingDamage 的 GE 结算时，会在 PostGameplayEffectExecute (或者 Execution Calculation) 里拦截到这个值。此时你可以结合目标当前的 Armor（护甲）、BlockChance（格挡几率）等次级属性进行统一计算，得出最终的实际伤害后，再去扣除 Health。 
+		3. 无需网络同步（非状态属性）：与 Health 或 Mana 这种持续存在且需要同步的常规属性不同，元属性是用于过程中计算的临时变量。因此你会发现它的 UPROPERTY 中没有 ReplicatedUsing 标签，它不需要且不应该跨网络复制，通常在伤害结算完成后就会被清零。 
+		4.生成访问器：ATTRIBUTE_ACCESSORS 宏为 IncomingDamage 自动生成了标准的 Getter 和 Setter 函数，方便在 C++ 中快速读取和修改该数值。 
+	 */
+	UPROPERTY(BlueprintReadOnly, Category = "Meta Attribute")
+	FGameplayAttributeData IncomingDamage;
+	ATTRIBUTE_ACCESSORS(UAuraAttributeSet, IncomingDamage);
+	
 	
 	
 	// OnRep 参数 OldX：复制更新前的旧值（便于做差值、播放动画等）。 
@@ -233,4 +244,6 @@ private:
 	
 	// 从 Data 里解析 Source/Target 相关对象并填充到 Props（内部会做 Cast/判空）。
 	void SetEffectProperties(const struct FGameplayEffectModCallbackData& Data, FEffectProperties& Props);
+	
+	void ShowFloatingText(FEffectProperties& Props, float Damage);
 };

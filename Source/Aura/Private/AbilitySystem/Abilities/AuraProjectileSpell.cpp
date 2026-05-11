@@ -2,15 +2,12 @@
 
 
 #include "AbilitySystem/Abilities/AuraProjectileSpell.h"
-
+#include "Aura/Public/AuraGameplayTags.h"
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponent.h"
 #include "Actor/AuraProjectile.h"
 #include "Interaction/CombatInterface.h"
 #include "Kismet/KismetMathLibrary.h"
-
-#include "Kismet/KismetSystemLibrary.h"
-#include "LevelInstance/LevelInstanceTypes.h"
 
 void UAuraProjectileSpell::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
                                            const FGameplayAbilityActorInfo* ActorInfo, 
@@ -48,6 +45,13 @@ void UAuraProjectileSpell::SpwanProjectile(const FVector& ProjectileTargetLocati
 		
 		UAbilitySystemComponent* SourceASC =  UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(GetAvatarActorFromActorInfo());
 		FGameplayEffectSpecHandle EffectSpecHandle = SourceASC->MakeOutgoingSpec(DamageEffectClass, GetAbilityLevel(), SourceASC->MakeEffectContext());
+		
+		/**这两行是在获取全局的 `FAuraGameplayTags` 单例，
+		 *并把 `Damage` 标签对应的 SetByCaller 数值写入到 `EffectSpecHandle`，数值为 50\.0。这样伤害效果就能在应用时读取该标签的数值。*/
+		const float ScaledDamage =  Damage.GetValueAtLevel(GetAbilityLevel());// 获取当前技能等级对应的伤害数值
+		FAuraGameplayTags GameplayTags = FAuraGameplayTags::Get();	
+		UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(EffectSpecHandle, GameplayTags.Damage, ScaledDamage);
+		
 		AuraProjectile->DamageEffectSpecHandle = EffectSpecHandle;
 		/**
 		 *这三行在获取施法者的 AbilitySystemComponent，基于 `DamageEffectClass` 和当前技能等级创建一个 `FGameplayEffectSpecHandle`

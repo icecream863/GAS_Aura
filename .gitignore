@@ -7,3 +7,4 @@ Build/
 *.sln
 *.suo
 Plugins/Developer/RiderLink/
+.vs/

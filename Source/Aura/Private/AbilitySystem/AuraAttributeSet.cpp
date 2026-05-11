@@ -6,7 +6,10 @@
 #include "AuraGameplayTags.h"
 #include "GameplayEffectExtension.h"
 #include "GameFramework/Character.h"
+#include "Interaction/CombatInterface.h"
+#include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
+#include "Player/AuraPlayerController.h"
 
 UAuraAttributeSet::UAuraAttributeSet()
 {
@@ -110,9 +113,55 @@ void UAuraAttributeSet::PostGameplayEffectExecute(const struct FGameplayEffectMo
 		SetMana(FMath::Clamp(GetMana(), 0.f, GetMaxMana()));
 	}
 	
-	// *** 这里限制 base value
-	// duration和 infinite都会修改 current value, instant 和 period( + duration or  +infinite) 会修改 base value
-	//gethealth = base value + duration/infinite modifier + instant/period modifier
+	if (Data.EvaluatedData.Attribute == GetIncomingDamageAttribute())
+	{
+		const float LocalIncomingDamage = GetIncomingDamage();
+		SetIncomingDamage(0.f);
+		if (LocalIncomingDamage >= 0)
+		{
+			const float NewHealth = GetHealth() - LocalIncomingDamage;
+			SetHealth(FMath::Clamp(NewHealth, 0.f, GetMaxHealth()));
+			
+			const bool bFatal = NewHealth <= 0.f;
+			
+			if (bFatal)
+			{
+				ICombatInterface* CombatInterface = Cast<ICombatInterface>(Props.TargetAvatarActor);
+				if (CombatInterface != nullptr)
+				{
+					CombatInterface->Die();
+				}
+			}
+			else
+			{
+				FGameplayTagContainer TagContainer;
+				TagContainer.AddTag(FAuraGameplayTags::Get().Effect_HitReact);
+				Props.TargetASC->TryActivateAbilitiesByTag(TagContainer);//根据标签触发
+			}
+			
+			ShowFloatingText(Props, LocalIncomingDamage);
+			
+		}
+		
+		
+	}
+	
+	 /* 这里限制 base value
+		duration和 infinite都会修改 current value, instant 和 period( + duration or  +infinite) 会修改 base value
+		gethealth = base value + duration/infinite modifier + instant/period modifier
+	*/
+}
+
+
+void UAuraAttributeSet::ShowFloatingText(FEffectProperties& Props, float Damage)
+{
+	if (Props.TargetCharacter != Props.SourceCharacter)
+	{
+		if (AAuraPlayerController* PC = Cast<AAuraPlayerController>(UGameplayStatics::GetPlayerController(Props.SourceCharacter,0)) )
+		{
+			PC->ShowDamageNumber(Damage, Props.TargetCharacter);
+		}
+	}
 }
 
 void UAuraAttributeSet::SetEffectProperties(const struct FGameplayEffectModCallbackData& Data, FEffectProperties& Props)
