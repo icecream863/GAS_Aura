@@ -59,8 +59,9 @@ protected:
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Character Class Default")
     int32 Level = 1;// 
 	
+	//不需要每个角色都 CharacterClassInfo,只需要一个全局的 CharacterClassInfo 就够了，角色类里只需要一个 CharacterClass 枚举来标识自己的职业类型就行了
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Character Class Default")
-	ECharacterClass CharacterClass = ECharacterClass::Elementalist;//默认元素使
+	ECharacterClass CharacterClass = ECharacterClass::Warrior;//默认元素使
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Enemy | Widget")
 	TObjectPtr<UWidgetComponent> HealthBar;

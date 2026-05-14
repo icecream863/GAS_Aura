@@ -67,4 +67,7 @@ public:
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Common Class DefaultInfo")
 	TSubclassOf<UGameplayEffect> VitalAttribute;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Common Class DefaultInfo")
+	TObjectPtr<UCurveTable> DamageCalculationCoefficients;
 };
