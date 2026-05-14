@@ -37,12 +37,23 @@ void UAuraProjectileSpell::SpwanProjectile(const FVector& ProjectileTargetLocati
 		SpawnTransform.SetLocation(SocketLocation);
 		SpawnTransform.SetRotation(SpawnRotation.Quaternion());
 		
-		AAuraProjectile* AuraProjectile = GetWorld()->SpawnActorDeferred<AAuraProjectile>(ProjectileClass,
+		AAuraProjectile* Projectile = GetWorld()->SpawnActorDeferred<AAuraProjectile>(ProjectileClass,
 			SpawnTransform, 
 			GetOwningActorFromActorInfo(), 
 			Cast<APawn>(GetAvatarActorFromActorInfo()),
 			ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 		
+		FGameplayEffectContextHandle EffectContextHandle = GetAbilitySystemComponentFromActorInfo()->MakeEffectContext();
+		EffectContextHandle.SetAbility(this);
+		EffectContextHandle.AddSourceObject(Projectile);
+		
+		TArray<TWeakObjectPtr<AActor>> Actors;
+		Actors.Add(Projectile);
+		EffectContextHandle.AddActors(Actors);
+		
+		FHitResult HitResult;
+		HitResult.Location = ProjectileTargetLocation;
+		EffectContextHandle.AddHitResult(HitResult);
 		
 		
 		
@@ -55,7 +66,7 @@ void UAuraProjectileSpell::SpwanProjectile(const FVector& ProjectileTargetLocati
 		FAuraGameplayTags GameplayTags = FAuraGameplayTags::Get();	
 		UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(EffectSpecHandle, GameplayTags.Damage, ScaledDamage);
 		
-		AuraProjectile->DamageEffectSpecHandle = EffectSpecHandle;
+		Projectile->DamageEffectSpecHandle = EffectSpecHandle;
 		/**
 		 *这三行在获取施法者的 AbilitySystemComponent，基于 `DamageEffectClass` 和当前技能等级创建一个 `FGameplayEffectSpecHandle`
 		 *，并把该效果规格保存到投射物上，供命中时应用伤害效果。
@@ -66,7 +77,7 @@ void UAuraProjectileSpell::SpwanProjectile(const FVector& ProjectileTargetLocati
 		例如设置属性或者调用函数。最后需要调用 FinishSpawning 来完成生成过程。
 		* 延迟化生成
 		*/
-		AuraProjectile->FinishSpawning(SpawnTransform);// 完成生成过程，激活Actor
+		Projectile->FinishSpawning(SpawnTransform);// 完成生成过程，激活Actor
 	
 	}
 }
