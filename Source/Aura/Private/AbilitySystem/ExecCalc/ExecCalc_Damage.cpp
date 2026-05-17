@@ -3,6 +3,7 @@
 
 #include "AbilitySystem/ExecCalc/ExecCalc_Damage.h"
 #include "AbilitySystemComponent.h"
+#include "AuraAbilityTypes.h"
 #include "AuraGameplayTags.h"
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "AbilitySystem/AuraAttributeSet.h"
@@ -30,6 +31,13 @@ struct AuraDamageStatics
 	DECLARE_ATTRIBUTE_CAPTUREDEF(CriticalHitDamage);
 	DECLARE_ATTRIBUTE_CAPTUREDEF(CriticalHitResistance);
 	
+	DECLARE_ATTRIBUTE_CAPTUREDEF(FireResistance);
+	DECLARE_ATTRIBUTE_CAPTUREDEF(LightningResistance);
+	DECLARE_ATTRIBUTE_CAPTUREDEF(ArcaneResistance);
+	DECLARE_ATTRIBUTE_CAPTUREDEF(PhysicalResistance);
+	
+	TMap<FGameplayTag, FGameplayEffectAttributeCaptureDefinition> TagsToCaptureDefs;
+	// 这个 Map 用来存储 不同伤害类型对应的 抓取定义， 这样我们就能在计算时根据伤害类型动态地获取对应的抗性属性了。
 
 	AuraDamageStatics()
 	{
@@ -47,8 +55,30 @@ struct AuraDamageStatics
 		DEFINE_ATTRIBUTE_CAPTUREDEF(UAuraAttributeSet, CriticalHitDamage, Source, false);
 		DEFINE_ATTRIBUTE_CAPTUREDEF(UAuraAttributeSet, CriticalHitResistance, Target, false);
 		
-	};  
-	
+		//注意，我们获取的抗性是自己身上的，但是 抗性属性是根据 目标来计算的
+		DEFINE_ATTRIBUTE_CAPTUREDEF(UAuraAttributeSet, FireResistance, Source, false);
+		DEFINE_ATTRIBUTE_CAPTUREDEF(UAuraAttributeSet, LightningResistance, Source, false);
+		DEFINE_ATTRIBUTE_CAPTUREDEF(UAuraAttributeSet, ArcaneResistance, Source, false);
+		DEFINE_ATTRIBUTE_CAPTUREDEF(UAuraAttributeSet, PhysicalResistance, Source, false);
+		
+		
+		//把不同伤害类型对应的 抓取定义 存到 Map 里， 这样我们就能在计算时根据伤害类型动态地获取对应的抗性属性了。
+		const FAuraGameplayTags& Tags = FAuraGameplayTags::Get();
+		
+		TagsToCaptureDefs.Add(Tags.Attributes_Secondary_Armor, ArmorDef);
+		TagsToCaptureDefs.Add(Tags.Attributes_Secondary_BlockChance, BlockChanceDef);
+		TagsToCaptureDefs.Add(Tags.Attributes_Secondary_ArmorPenetration, ArmorPenetrationDef);
+		TagsToCaptureDefs.Add(Tags.Attributes_Secondary_CriticalHitChance, CriticalHitChanceDef);
+		TagsToCaptureDefs.Add(Tags.Attributes_Secondary_CriticalHitDamage, CriticalHitDamageDef);
+		TagsToCaptureDefs.Add(Tags.Attributes_Secondary_CriticalHitResistance, CriticalHitResistanceDef);
+		
+		TagsToCaptureDefs.Add(Tags.Damage_Fire, FireResistanceDef);
+		TagsToCaptureDefs.Add(Tags.Damage_Lightning, LightningResistanceDef);
+		TagsToCaptureDefs.Add(Tags.Damage_Arcane, ArcaneResistanceDef);
+		TagsToCaptureDefs.Add(Tags.Damage_Physical, PhysicalResistanceDef);
+		
+		
+	}
 };
 
 /** 
@@ -75,6 +105,11 @@ UExecCalc_Damage::UExecCalc_Damage()
 	RelevantAttributesToCapture.Add(DamageStatics().CriticalHitDamageDef);
 	RelevantAttributesToCapture.Add(DamageStatics().CriticalHitResistanceDef);
 	
+	RelevantAttributesToCapture.Add(DamageStatics().FireResistanceDef);
+	RelevantAttributesToCapture.Add(DamageStatics().LightningResistanceDef);
+	RelevantAttributesToCapture.Add(DamageStatics().ArcaneResistanceDef);
+	RelevantAttributesToCapture.Add(DamageStatics().PhysicalResistanceDef);
+	
 }
 
 void UExecCalc_Damage::Execute_Implementation(const FGameplayEffectCustomExecutionParameters& ExecutionParams,
@@ -100,9 +135,37 @@ void UExecCalc_Damage::Execute_Implementation(const FGameplayEffectCustomExecuti
 	EvaluationParameters.SourceTags = SourceTags;
 	EvaluationParameters.TargetTags = TargetTags;
 	
+	FGameplayEffectContextHandle EffectContextHandle = Spec.GetContext();
+	// 从 EffectContextHandle 里读取是否格挡/暴击的字段，这些字段是我们在自定义 EffectContext 里添加的，并通过 NetSerialize 同步到客户端的。
+	
+	
 	
 	//Get Damage by Caller Magnitude
-	float Damage = Spec.GetSetByCallerMagnitude(FAuraGameplayTags::Get().Damage);
+	//中文注释：从 GE 的 SetByCaller 里获取伤害值。我们在技能蓝图里配置这个 GE 时，会通过 SetByCaller 的方式把伤害值传进来，这样就能让伤害值具有更好的灵活性和可调节性。
+	
+	float Damage = 0.f;
+	
+	for (const TPair<FGameplayTag, FGameplayTag>& Pair : FAuraGameplayTags::Get().DamageTypesToResistances)
+	{
+		FGameplayTag DamageTag = Pair.Key;
+		FGameplayTag ResistanceTag = Pair.Value;
+		
+		checkf(DamageStatics().TagsToCaptureDefs.Contains(ResistanceTag), TEXT("DamageType %s does not have a corresponding CaptureDef for its resistance attribute! Please add it to the TagsToCaptureDefs map in AuraDamageStatics."), *DamageTag.ToString());
+		
+		const FGameplayEffectAttributeCaptureDefinition& CaptureDef = DamageStatics().TagsToCaptureDefs[ResistanceTag];
+		
+		float DamageTypeValue =  Spec.GetSetByCallerMagnitude(Pair.Key);//从 GE 的 SetByCaller 里获取这个伤害类型的伤害值,没有返回 0
+		
+		float Resistance = 0.f;
+		ExecutionParams.AttemptCalculateCapturedAttributeMagnitude(CaptureDef, EvaluationParameters, Resistance);
+		Resistance = FMath::Clamp(Resistance, 0.f, 100.f);
+		
+		DamageTypeValue *= (100.f - Resistance) / 100.f;//根据抗性计算这个伤害类型的实际伤害值
+			
+		Damage += DamageTypeValue;
+	}
+	
+	
 	
 	/** 捕获值模板 */
 	float TargetBlockChance = 0.f;
@@ -143,16 +206,24 @@ void UExecCalc_Damage::Execute_Implementation(const FGameplayEffectCustomExecuti
 	//格挡伤害减半
 	const bool bBlock = FMath::RandRange(1, 100) < TargetBlockChance;
 	Damage = bBlock ? Damage/2.f : Damage;
-	//TODO: 实现UI出现格挡文本
+	
+	UAuraAbilitySystemLibrary::SetBlockedHit(EffectContextHandle, bBlock);
+	//在GEcontext里设置是否格挡的字段，这样客户端就能通过 EffectContext 读取到这个信息来显示格挡文本/特效等。
 	
 	//计算护甲穿透 和 护甲减伤
 	float EffectiveArmor = TargetArmor * (100.f - SourceArmorPenetration * ArmorPenetrationCoefficient) / 100.f;
 	Damage *= (100.f - EffectiveArmor * EffectiveArmorCoefficient) / 100.f;
 	
 	//计算 暴击率，暴击伤害，暴击抗性
-	const float EffectiveCrititalHitChance = SourceCriticalHitChance - TargetCriticalHitResistance * CriticalHitResistanceCoefficient;
-	const bool bCriticalHit = FMath::RandRange(1, 100) < EffectiveCrititalHitChance;
+	const float EffectiveCriticalHitChance = SourceCriticalHitChance - TargetCriticalHitResistance * CriticalHitResistanceCoefficient;
+	const bool bCriticalHit = FMath::RandRange(1, 100) < EffectiveCriticalHitChance;
 	Damage = bCriticalHit ? 2 * Damage + SourceCriticalHitDamage : Damage;
+	
+	const FGameplayEffectContext* Ctx = EffectContextHandle.Get();
+	UE_LOG(LogTemp, Warning, TEXT("CtxStruct=%s"), *GetNameSafe(Ctx ? Ctx->GetScriptStruct() : nullptr));
+	
+	UAuraAbilitySystemLibrary::SetCriticalHit(EffectContextHandle, bCriticalHit);
+	//在GEcontext里设置是否暴击的字段，这样客户端就能通过 EffectContext 读取到这个信息来显示暴击文本/特效等。
 	
 	
 	const FGameplayModifierEvaluatedData EvaluationData(UAuraAttributeSet::GetIncomingDamageAttribute(), EGameplayModOp::Additive, Damage);

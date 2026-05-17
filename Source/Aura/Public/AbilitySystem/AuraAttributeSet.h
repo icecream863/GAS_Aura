@@ -177,6 +177,23 @@ public:
 	FGameplayAttributeData MaxMana;
 	ATTRIBUTE_ACCESSORS(UAuraAttributeSet, MaxMana);
 	
+	//伤害抗性属性
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_FireResistance, Category = "Resistance Attribute")
+	FGameplayAttributeData FireResistance;// 火焰抗性：减少受到的火焰伤害的能力
+	ATTRIBUTE_ACCESSORS(UAuraAttributeSet, FireResistance);
+	
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_LightningResistance, Category = "Resistance Attribute")
+	FGameplayAttributeData LightningResistance;// 火焰抗性：减少受到的火焰伤害的能力
+	ATTRIBUTE_ACCESSORS(UAuraAttributeSet, LightningResistance);
+	
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_ArcaneResistance, Category = "Resistance Attribute")
+	FGameplayAttributeData ArcaneResistance;// 火焰抗性：减少受到的火焰伤害的能力
+	ATTRIBUTE_ACCESSORS(UAuraAttributeSet, ArcaneResistance);
+	
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_PhysicalResistance, Category = "Resistance Attribute")
+	FGameplayAttributeData PhysicalResistance;// 火焰抗性：减少受到的火焰伤害的能力
+	ATTRIBUTE_ACCESSORS(UAuraAttributeSet, PhysicalResistance);
+	
 	/**
 	 *	Meta Attribute
 		1. 处理伤害的临时缓冲：在受到攻击时，GameplayEffect (GE) 通常不会直接修改 Health（生命值），而是把基础伤害值赋予给 IncomingDamage 这个元属性。 
@@ -240,10 +257,22 @@ public:
 	UFUNCTION()
 	void OnRep_ManaRegeneration(const FGameplayAttributeData& OldManaRegeneration) const;
 	
+	UFUNCTION()
+	void OnRep_FireResistance(const FGameplayAttributeData& OldFireResistance) const;
+	
+	UFUNCTION()
+	void OnRep_LightningResistance(const FGameplayAttributeData& OldLightningResistance) const;
+	
+	UFUNCTION()
+	void OnRep_ArcaneResistance(const FGameplayAttributeData& OldArcaneResistance) const;
+	
+	UFUNCTION()
+	void OnRep_PhysicalResistance(const FGameplayAttributeData& OldPhysicalResistance) const;
+	
 private:
 	
 	// 从 Data 里解析 Source/Target 相关对象并填充到 Props（内部会做 Cast/判空）。
 	void SetEffectProperties(const struct FGameplayEffectModCallbackData& Data, FEffectProperties& Props);
 	
-	void ShowFloatingText(FEffectProperties& Props, float Damage);
+	void ShowFloatingText(FEffectProperties& Props, float Damage, bool bIsBlockedHit, bool bIsCriticalHit);
 };

@@ -1,6 +1,5 @@
 #include "AuraAbilityTypes.h"
 
-#include "Math/UnrealMathNeon.h"
 
 bool FAuraGameplayEffectContext::NetSerialize(FArchive& Ar, class UPackageMap* Map, bool& bOutSuccess)
 {

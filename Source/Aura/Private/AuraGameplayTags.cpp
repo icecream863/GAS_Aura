@@ -42,8 +42,23 @@ void FAuraGameplayTags::InitializeNativeGameplayTags()
 	GameplayTags.Damage = UGameplayTagsManager::Get().AddNativeGameplayTag(FName("Damage"), TEXT("Damage"));
 	GameplayTags.Effect_HitReact = UGameplayTagsManager::Get().AddNativeGameplayTag(FName("Effect.HitReact"), TEXT("Effect_HitReact"));
 
-	
-	
+	//伤害类型
+	GameplayTags.Damage_Fire = UGameplayTagsManager::Get().AddNativeGameplayTag(FName("Damage.Fire"), TEXT("Fire Damage Type"));
+	GameplayTags.Damage_Lightning = UGameplayTagsManager::Get().AddNativeGameplayTag(FName("Damage.Lightning"), TEXT(""));
+	GameplayTags.Damage_Arcane = UGameplayTagsManager::Get().AddNativeGameplayTag(FName("Damage.Arcane"), TEXT(""));
+	GameplayTags.Damage_Physical = UGameplayTagsManager::Get().AddNativeGameplayTag(FName("Damage.Physical"), TEXT(""));
+
+	//伤害抗性
+	GameplayTags.Damage_Resistance_Fire= UGameplayTagsManager::Get().AddNativeGameplayTag(FName("Damage.Resistance.Fire"), TEXT(""));
+	GameplayTags.Damage_Resistance_Lightning = UGameplayTagsManager::Get().AddNativeGameplayTag(FName("Damage.Resistance.Lightning"), TEXT(""));
+	GameplayTags.Damage_Resistance_Arcane = UGameplayTagsManager::Get().AddNativeGameplayTag(FName("Damage.Resistance.Arcane"), TEXT(""));
+	GameplayTags.Damage_Resistance_Physical = UGameplayTagsManager::Get().AddNativeGameplayTag(FName("Damage.Resistance.Physical"), TEXT(""));
+
+	//添加到 Map 里，方便我们在计算伤害时遍历所有伤害类型标签来获取对应的抗性标签。	
+	GameplayTags.DamageTypesToResistances.Add(GameplayTags.Damage_Fire, GameplayTags.Damage_Resistance_Fire);
+	GameplayTags.DamageTypesToResistances.Add(GameplayTags.Damage_Lightning, GameplayTags.Damage_Resistance_Lightning);
+	GameplayTags.DamageTypesToResistances.Add(GameplayTags.Damage_Arcane, GameplayTags.Damage_Resistance_Arcane);
+	GameplayTags.DamageTypesToResistances.Add(GameplayTags.Damage_Physical, GameplayTags.Damage_Resistance_Physical);
 }
 
 

@@ -49,6 +49,22 @@ public:
 	//~ Damage Tags
 	FGameplayTag Damage;
 	
+	//~ Damage Types 伤害 类型
+	TMap<FGameplayTag,FGameplayTag> DamageTypesToResistances;// 这个数组的作用是：把所有伤害类型的标签都放在一起，方便我们在计算伤害时遍历它们来获取对应的数值。
+	
+	FGameplayTag Damage_Fire;
+	FGameplayTag Damage_Lightning;
+	FGameplayTag Damage_Arcane;
+	FGameplayTag Damage_Physical;
+	 
+	//~ Resistance Tags 伤害 抗性
+	FGameplayTag Damage_Resistance_Fire;
+	FGameplayTag Damage_Resistance_Lightning;
+	FGameplayTag Damage_Resistance_Arcane;
+	FGameplayTag Damage_Resistance_Physical;
+	
+	
+	//~ Set By Caller Tags
 	FGameplayTag Effect_HitReact;
 	
 protected:

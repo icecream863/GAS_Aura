@@ -4,6 +4,7 @@
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 
 #include "AbilitySystemComponent.h"
+#include "AuraAbilityTypes.h"
 #include "GameplayEffectTypes.h"
 #include "Game/AuraGameModeBase.h"
 #include "Kismet/GameplayStatics.h"
@@ -105,4 +106,57 @@ UCharacterClassInfo* UAuraAbilitySystemLibrary::GetCharacterClassInfo(const UObj
 	if (AuraGameMode == nullptr) return nullptr;//客户端没有 GameMode,在客户端执行就会返回 空指针
 	
 	return AuraGameMode->CharacterClassInfo;
+}
+
+bool UAuraAbilitySystemLibrary::IsBlockedHit(const FGameplayEffectContextHandle& EffectContextHandle)
+{	
+	/**
+	 * 这里使用 static_cast 而不是 Cast<>()：
+	 * - EffectContextHandle.Get() 返回的是 FGameplayEffectContext*（这是 USTRUCT，不是 UObject）
+	 * - UE 的 Cast<>() 只能用于 UObject 体系（依赖 UClass/IsA），对 UStruct 无效
+	 *
+	 * 因为我们通过 UAuraAbilitySystemGlobals::AllocGameplayEffectContext()
+	 * 让项目默认分配的是 FAuraGameplayEffectContext，所以这里把父类指针还原为子类指针来读取自定义字段。
+	 *
+	 * 注意：static_cast 不做运行时类型检查。
+	 * 如果某些 EffectContext 不是 FAuraGameplayEffectContext（例如未正确配置 AbilitySystemGlobalsClassName），
+	 * 这里的转换可能导致未定义行为。更稳的做法是先检查：
+	 *   EffectContextHandle.Get()->GetScriptStruct() == FAuraGameplayEffectContext::StaticStruct()
+	 */
+	if (const FAuraGameplayEffectContext* AuraEffectContext = static_cast<const FAuraGameplayEffectContext*>(EffectContextHandle.Get()))
+	{
+		return AuraEffectContext->IsBlockedHit();
+	}
+	
+	return false;
+}
+
+bool UAuraAbilitySystemLibrary::IsCriticalHit(const FGameplayEffectContextHandle& EffectContextHandle)
+{	
+	/**
+	 * 同 IsBlockedHit()：EffectContext 是 UStruct（非 UObject），因此不能用 Cast<>。
+	 * 使用 static_cast 将 FGameplayEffectContext* 还原为 FAuraGameplayEffectContext* 以读取自定义字段。
+	 */
+	if (const FAuraGameplayEffectContext* AuraEffectContext = static_cast<const FAuraGameplayEffectContext*>(EffectContextHandle.Get()))
+	{
+		return AuraEffectContext->IsCriticalHit();
+	}
+	
+	return false;
+}
+
+void UAuraAbilitySystemLibrary::SetBlockedHit(FGameplayEffectContextHandle& EffectContextHandle, bool bIsBlockedHit)
+{
+	if ( FAuraGameplayEffectContext* AuraEffectContext = static_cast< FAuraGameplayEffectContext*>(EffectContextHandle.Get()))
+	{
+		AuraEffectContext->SetBlockedHit(bIsBlockedHit);
+	}
+}
+
+void UAuraAbilitySystemLibrary::SetCriticalHit(FGameplayEffectContextHandle& EffectContextHandle, bool bInIsCritialHit)
+{
+	if (FAuraGameplayEffectContext* AuraEffectContext = static_cast<FAuraGameplayEffectContext*>(EffectContextHandle.Get()))
+	{
+		AuraEffectContext->SetCriticalHit(bInIsCritialHit);
+	}
 }

@@ -56,15 +56,24 @@ void UAuraProjectileSpell::SpwanProjectile(const FVector& ProjectileTargetLocati
 		EffectContextHandle.AddHitResult(HitResult);
 		
 		
-		
 		UAbilitySystemComponent* SourceASC =  UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(GetAvatarActorFromActorInfo());
 		FGameplayEffectSpecHandle EffectSpecHandle = SourceASC->MakeOutgoingSpec(DamageEffectClass, GetAbilityLevel(), SourceASC->MakeEffectContext());
 		
-		/**这两行是在获取全局的 `FAuraGameplayTags` 单例，
-		 *并把 `Damage` 标签对应的 SetByCaller 数值写入到 `EffectSpecHandle`，数值为 50\.0。这样伤害效果就能在应用时读取该标签的数值。*/
-		const float ScaledDamage =  Damage.GetValueAtLevel(GetAbilityLevel());// 获取当前技能等级对应的伤害数值
-		FAuraGameplayTags GameplayTags = FAuraGameplayTags::Get();	
-		UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(EffectSpecHandle, GameplayTags.Damage, ScaledDamage);
+		/**
+		*这行是在给 GameplayEffectSpec 写入一个 `SetByCaller` 数值，键是 `GameplayTags.Damage`（一个 `GameplayTag`），值是 `ScaledDamage`。
+		`EffectSpecHandle`：即将应用到目标身上的 `GameplayEffect` 的“规格/实例数据”
+		`GameplayTags.Damage`：用作 `SetByCaller` 的标识（类似参数名）
+		`ScaledDamage`：实际要传递的伤害数值（这里按技能等级缩放后的伤害）
+		后续当这个 `GameplayEffect` 被应用时，效果里（或执行计算 `ExecutionCalculation` / MMC 等）会通过同一个 Tag（`Damage`）把这个数值读出来，用于计算最终伤害
+		 */
+		
+		for (const auto& Pair : DamageTypeMap)
+		{
+			const FGameplayTag& DamageTypeTag = Pair.Key;
+			const FScalableFloat& DamageTypeValue = Pair.Value;
+			const float ScaledDamageTypeValue = DamageTypeValue.GetValueAtLevel(GetAbilityLevel());
+			UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(EffectSpecHandle, DamageTypeTag, ScaledDamageTypeValue);
+		}
 		
 		Projectile->DamageEffectSpecHandle = EffectSpecHandle;
 		/**

@@ -60,7 +60,6 @@ struct FAuraGameplayEffectContext : public FGameplayEffectContext
 	
 	/**
 	 * 返回该 Context 的实际 UScriptStruct。
-	 *
 	 * 这会影响引擎在（反）序列化时将其识别为“哪个结构体类型”。
 	 * 对于子类 Context，应返回自己的 StaticStruct()。
 	 */

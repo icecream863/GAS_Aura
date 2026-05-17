@@ -17,5 +17,5 @@ class AURA_API UDamageTextComponent : public UWidgetComponent
 public:
 	
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
-	void SetDamageText(const float DamageText);
+	void SetDamageText(const float DamageText, bool bIsBlockedHit, bool bIsCriticalHit);
 };
