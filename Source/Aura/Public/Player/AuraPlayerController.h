@@ -29,7 +29,7 @@ public:
 	AAuraPlayerController();
 	virtual void PlayerTick(float DeltaTime) override;
 
-	UFUNCTION(Client, Reliable)//服务端调用，客户端执行
+	UFUNCTION(Client, Reliable)//服务端调用，客户端执行， 要确保调用正确的 PlayerController（不是总假设玩家是 PlayerIndex 0 的那个），因此需要 Reliable 来保证 RPC 不丢失。
 	void ShowDamageNumber(float DamageAmount, ACharacter* TargetCharacter, bool bIsBlockedHit, bool bIsCriticalHit);
 
 protected:

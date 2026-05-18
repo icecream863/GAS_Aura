@@ -30,7 +30,6 @@ void UAuraProjectileSpell::SpwanProjectile(const FVector& ProjectileTargetLocati
 		const FVector SocketLocation = CombatInterface->GetCombatSocketLocation();// 获取攻击出发位置， 在auraCharacterBase里实现过
 		
 		FRotator SpawnRotation = UKismetMathLibrary::FindLookAtRotation(SocketLocation, ProjectileTargetLocation);
-		SpawnRotation.Pitch = 0.0f;
 		
 		
 		FTransform SpawnTransform;

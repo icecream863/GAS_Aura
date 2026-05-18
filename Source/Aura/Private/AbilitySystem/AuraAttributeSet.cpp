@@ -8,7 +8,6 @@
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "GameFramework/Character.h"
 #include "Interaction/CombatInterface.h"
-#include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
 #include "Player/AuraPlayerController.h"
 
@@ -175,7 +174,12 @@ void UAuraAttributeSet::ShowFloatingText(FEffectProperties& Props, float Damage,
 {
 	if (Props.TargetCharacter != Props.SourceCharacter)
 	{
-		if (AAuraPlayerController* PC = Cast<AAuraPlayerController>(UGameplayStatics::GetPlayerController(Props.SourceCharacter,0)) )
+		/**
+		 * 中文注释：PostGameplayEffectExecute 在非预测效果的权威（服务器）上运行。我们必须在*施加者的拥有控制器*上调用客户端 RPC，
+		 * 这样伤害数字才会在正确的客户端执行（不总是服务器上的玩家索引 0）。UGameplayStatics::GetPlayerController(GetWorld(), 0) 可能不适用于多人游戏或 AI 场景。
+		 * 在服务端用 index=0 取到的通常是“服务端本机的第一个PC（Listen Server 的主机PC）”
+		 */
+		if (AAuraPlayerController* PC = Cast<AAuraPlayerController>(Props.SourceController))
 		{
 			PC->ShowDamageNumber(Damage, Props.TargetCharacter, bIsBlockedHit, bIsCriticalHit);
 		}
