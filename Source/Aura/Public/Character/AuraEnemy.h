@@ -9,6 +9,8 @@
 #include "AbilitySystem/Data/CharacterClassInfo.h"
 #include "AuraEnemy.generated.h"
 
+class AAuraAIController;
+class UBehaviorTree;
 class UWidgetComponent;
 /**
  * 
@@ -20,6 +22,8 @@ class AURA_API AAuraEnemy : public AAuraCharacterBase, public IEnemyInterface
 
 public:
 	AAuraEnemy();
+	
+	virtual void PossessedBy(AController* NewController) override;
 	
 	/** EnemyInterface */
 	virtual void HighLightActor() override;
@@ -67,6 +71,10 @@ protected:
 	TObjectPtr<UWidgetComponent> HealthBar;
 	//这个是 控件组件，需要自己在ue里设置 widgetClass
 
+	UPROPERTY(EditAnywhere, Category = "AI")
+	TObjectPtr<UBehaviorTree> BehaviorTree;
 	
-	
+	UPROPERTY()
+	TObjectPtr<AAuraAIController> AuraAIController;
+	//这是 实例，蓝图里需要 设置一个 类
 };
