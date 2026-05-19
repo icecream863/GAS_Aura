@@ -51,7 +51,10 @@ protected:
 	
 	
 	UPROPERTY(EditAnywhere,BlueprintReadOnly, Category = "Applied Effect")
-	bool bDestoryOnEffectRemoval;
+	bool bDestroyOnEffectApplication = false;
+	
+	UPROPERTY(EditAnywhere,BlueprintReadOnly, Category = "Applied Effect")
+	bool bApplyEffectToEnemy = false;
 
 	UPROPERTY(EditAnywhere,BlueprintReadOnly, Category = "Applied Effect")
 	TSubclassOf<UGameplayEffect> InstantGameplayEffectClass;
@@ -76,7 +79,7 @@ protected:
 	UPROPERTY(EditAnywhere,BlueprintReadOnly, Category = "Applied Effect")
 	EEffectRemovalPolicy InfiniteEffectRemovalPolicy = EEffectRemovalPolicy::RemoveOnEndOverlap;
 	
-	
+	UPROPERTY()
 	TMap<FActiveGameplayEffectHandle, UAbilitySystemComponent*> ActiveEffectHandles;
 	
 	UPROPERTY(EditAnywhere,BlueprintReadOnly, Category = "Applied Effect")

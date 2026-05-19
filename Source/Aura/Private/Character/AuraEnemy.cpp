@@ -23,6 +23,12 @@ AAuraEnemy::AAuraEnemy()
 	AbilitySystemComponent->SetIsReplicated(true);
 	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Minimal);
 	
+	bUseControllerRotationPitch = false;
+	bUseControllerRotationYaw = false;
+	bUseControllerRotationRoll = false;
+	
+	GetCharacterMovement()->bUseControllerDesiredRotation = true;
+	
 	AttributeSet = CreateDefaultSubobject<UAuraAttributeSet>("AttributeSet");
 	
 	HealthBar = CreateDefaultSubobject<UWidgetComponent>("HealthBar");
@@ -32,6 +38,10 @@ AAuraEnemy::AAuraEnemy()
 void AAuraEnemy::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
+	/**
+	*你要的是**“是否允许执行/是否打断切换”** → 用 Decorator
+	你要的是**“分支运行期间持续刷新信息/写黑板”** → 用 Service
+	*/
 	
 	if (!HasAuthority()) return; // 只在服务端执行，服务端才有AI Controller
 	AuraAIController = Cast<AAuraAIController>(NewController);
@@ -39,6 +49,9 @@ void AAuraEnemy::PossessedBy(AController* NewController)
 	AuraAIController->GetBlackboardComponent()->InitializeBlackboard(*BehaviorTree->BlackboardAsset);
 	//把黑板资源“装载”到 UBlackboardComponent 里
 	AuraAIController->RunBehaviorTree(BehaviorTree);
+	
+	AuraAIController->GetBlackboardComponent()->SetValueAsBool(FName("HitReacting"), false);
+	AuraAIController->GetBlackboardComponent()->SetValueAsBool(FName("IsRangedAttacker"), CharacterClass != ECharacterClass::Warrior);
 }
 
 void AAuraEnemy::BeginPlay()
@@ -89,7 +102,8 @@ void AAuraEnemy::HitReactTagChanged(const FGameplayTag CallbackTag, int32 NewCou
 	bHitReact = NewCount > 0 ? true : false;
 	
 	GetCharacterMovement()-> MaxWalkSpeed = bHitReact ? 0.f : BaseWalkSpeed;
-	
+	AuraAIController->GetBlackboardComponent()->SetValueAsBool(FName("HitReacting"), bHitReact);
+
 	
 }
 

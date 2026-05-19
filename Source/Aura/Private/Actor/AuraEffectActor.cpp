@@ -23,7 +23,7 @@ void AAuraEffectActor::BeginPlay()
 
 void AAuraEffectActor::ApplyEffectToTarget(AActor* TargetActor, TSubclassOf<UGameplayEffect> GameplayEffectClass)
 {
-	//1. 用IAbilitySystemInterface接口
+	/** 1. 用IAbilitySystemInterface接口
 	
 	// IAbilitySystemInterface* AbilitySystemInterface =  Cast<IAbilitySystemInterface>(Target);
 	// if (AbilitySystemInterface)
@@ -32,6 +32,10 @@ void AAuraEffectActor::ApplyEffectToTarget(AActor* TargetActor, TSubclassOf<UGam
 	// }
 	
 	// 2. 用gas的函数库，即便没有继承 IAbilitySystemInterface接口，蓝图中也可以使用
+	*/
+	
+	if (!bApplyEffectToEnemy && TargetActor->ActorHasTag(FName("Enemy"))) return;// 如果这个效果不作用于敌人，并且目标是敌人，就直接返回，不施加效果
+	
 	UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(TargetActor);
 	if (TargetASC == nullptr) return;
 	check(GameplayEffectClass);
@@ -50,10 +54,17 @@ void AAuraEffectActor::ApplyEffectToTarget(AActor* TargetActor, TSubclassOf<UGam
 		//~ TargetASC可能对应不同ActiveGameplayEffectHandle
 	}
 	
+	if (!bIsInfinite)
+	{
+		Destroy();
+	}
+	
 }
 
 void AAuraEffectActor::OnOverlap(AActor* TargetActor)
 {
+	if (!bApplyEffectToEnemy && TargetActor->ActorHasTag(FName("Enemy"))) return;// 如果这个效果不作用于敌人，并且目标是敌人，就直接返回，不施加效果
+
 	if (InstantEffectApplicationPolicy == EEffectApplicationPolicy::ApplyOnOverlap)
 	{
 		ApplyEffectToTarget(TargetActor, InstantGameplayEffectClass);
@@ -72,6 +83,8 @@ void AAuraEffectActor::OnOverlap(AActor* TargetActor)
 
 void AAuraEffectActor::OnEndOverlap(AActor* TargetActor)
 {
+	if (!bApplyEffectToEnemy && TargetActor->ActorHasTag(FName("Enemy"))) return;// 如果这个效果不作用于敌人，并且目标是敌人，就直接返回，不施加效果
+
 	if (InstantEffectApplicationPolicy == EEffectApplicationPolicy::ApplyOnEndOverlap)
 	{
 		ApplyEffectToTarget(TargetActor, InstantGameplayEffectClass);
