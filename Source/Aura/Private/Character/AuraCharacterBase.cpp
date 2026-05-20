@@ -67,7 +67,7 @@ void AAuraCharacterBase::MulticastHandleDeath_Implementation()
 }
 
 
-FVector AAuraCharacterBase::GetCombatSocketLocation()
+FVector AAuraCharacterBase::GetCombatSocketLocation_Implementation()
 {
 	check(Weapon);
 	return Weapon->GetSocketLocation(WeaponTipSocketName);

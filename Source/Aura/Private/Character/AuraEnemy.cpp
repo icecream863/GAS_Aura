@@ -54,6 +54,16 @@ void AAuraEnemy::PossessedBy(AController* NewController)
 	AuraAIController->GetBlackboardComponent()->SetValueAsBool(FName("IsRangedAttacker"), CharacterClass != ECharacterClass::Warrior);
 }
 
+AActor* AAuraEnemy::GetCombatTarget_Implementation()
+{
+	return CombatTarget;
+}
+
+void AAuraEnemy::SetCombatTarget_Implementation(AActor* InCombatTarget)
+{
+	CombatTarget = InCombatTarget;
+}
+
 void AAuraEnemy::BeginPlay()
 {
 	Super::BeginPlay();
@@ -62,7 +72,7 @@ void AAuraEnemy::BeginPlay()
 	
 	if (HasAuthority())
 	{
-		UAuraAbilitySystemLibrary::GiveStartupAbilities(this, AbilitySystemComponent);
+		UAuraAbilitySystemLibrary::GiveStartupAbilities(this, AbilitySystemComponent, CharacterClass);
 		//客户端没有 GameMode,在客户端执行就会返回 空指针，所以要在服务端执行。
 	}
 	
@@ -101,8 +111,23 @@ void AAuraEnemy::HitReactTagChanged(const FGameplayTag CallbackTag, int32 NewCou
 {
 	bHitReact = NewCount > 0 ? true : false;
 	
-	GetCharacterMovement()-> MaxWalkSpeed = bHitReact ? 0.f : BaseWalkSpeed;
-	AuraAIController->GetBlackboardComponent()->SetValueAsBool(FName("HitReacting"), bHitReact);
+	GetCharacterMovement()->MaxWalkSpeed = bHitReact ? 0.f : BaseWalkSpeed;
+
+	// 仅把 MaxWalkSpeed 设为 0 有时不足以立刻停下（AI MoveTo 可能还在驱动 PathFollowing），
+	// 所以这里显式停止当前移动。
+	if (bHitReact)
+	{
+		GetCharacterMovement()->StopMovementImmediately();
+		if (AuraAIController)
+		{
+			AuraAIController->StopMovement();
+		}
+	}
+
+	if (AuraAIController && AuraAIController->GetBlackboardComponent())
+	{
+		AuraAIController->GetBlackboardComponent()->SetValueAsBool(FName("HitReacting"), bHitReact);
+	}
 
 	
 }

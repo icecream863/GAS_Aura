@@ -40,7 +40,11 @@ struct FCharacterClassDefaultInfo
 	GENERATED_BODY()
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Class DefaultInfo")
-	TSubclassOf<UGameplayEffect> PrimaryAttribute;//GE初始化主属性
+	TSubclassOf<UGameplayEffect> PrimaryAttribute;//GE初始化主属性，这个结构体在内部，由下面的 TMap 暴露
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Common Class DefaultInfo")
+	TArray<TSubclassOf<UGameplayAbility>> StartupAbilities;
+	
 	
 };
 

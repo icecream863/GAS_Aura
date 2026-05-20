@@ -18,16 +18,17 @@ void UAuraProjectileSpell::ActivateAbility(const FGameplayAbilitySpecHandle Hand
 		
 }
 
-void UAuraProjectileSpell::SpwanProjectile(const FVector& ProjectileTargetLocation)
+void UAuraProjectileSpell::SpawnProjectile(const FVector& ProjectileTargetLocation)
 {
 	const bool bIsServer = GetAvatarActorFromActorInfo()->HasAuthority();
 	if (!bIsServer) return;
 	
-	ICombatInterface* CombatInterface = Cast<ICombatInterface>(GetAvatarActorFromActorInfo());
 	
-	if (CombatInterface)
+	AActor* AvatarActor = GetAvatarActorFromActorInfo();
+	if (AvatarActor && AvatarActor->GetClass()->ImplementsInterface(UCombatInterface::StaticClass()))
 	{
-		const FVector SocketLocation = CombatInterface->GetCombatSocketLocation();// 获取攻击出发位置， 在auraCharacterBase里实现过
+		// BlueprintNativeEvent 必须通过 Execute_XXX 调用，不能直接调用接口事件函数。
+		const FVector SocketLocation = ICombatInterface::Execute_GetCombatSocketLocation(AvatarActor);
 		
 		FRotator SpawnRotation = UKismetMathLibrary::FindLookAtRotation(SocketLocation, ProjectileTargetLocation);
 		

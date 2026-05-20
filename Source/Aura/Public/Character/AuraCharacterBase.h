@@ -28,7 +28,7 @@ public:
 	//这是重载 IAbilitySystemInterface里的函数
 	
 	UAttributeSet* GetAttributeSet() const{ return AttributeSet; }
-	virtual FVector GetCombatSocketLocation() override;
+	virtual FVector GetCombatSocketLocation_Implementation() override;
 	virtual UAnimMontage* GetHitReactMontage_Implementation() override;
 	virtual void BeginPlay() override;
 	

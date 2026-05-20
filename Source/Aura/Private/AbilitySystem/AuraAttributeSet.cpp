@@ -148,7 +148,7 @@ void UAuraAttributeSet::PostGameplayEffectExecute(const struct FGameplayEffectMo
 			{
 				FGameplayTagContainer TagContainer;
 				TagContainer.AddTag(FAuraGameplayTags::Get().Effect_HitReact);
-				Props.TargetASC->TryActivateAbilitiesByTag(TagContainer);//根据标签触发
+				Props.TargetASC->TryActivateAbilitiesByTag(TagContainer);//根据标签触发受击反应能力
 			}
 			
 			FGameplayEffectContextHandle EffectContextHandle = Props.EffectContextHandle;

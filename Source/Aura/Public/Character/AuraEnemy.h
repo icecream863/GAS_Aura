@@ -24,6 +24,8 @@ public:
 	AAuraEnemy();
 	
 	virtual void PossessedBy(AController* NewController) override;
+	virtual AActor* GetCombatTarget_Implementation() override;
+	virtual void SetCombatTarget_Implementation(AActor* InCombatTarget) override;
 	
 	/** EnemyInterface */
 	virtual void HighLightActor() override;
@@ -60,6 +62,7 @@ protected:
 	virtual void InitialDefaultAttributes() const override;
 	
 	
+	
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Character Class Default")
     int32 Level = 1;// 
 	
@@ -77,4 +80,7 @@ protected:
 	UPROPERTY()
 	TObjectPtr<AAuraAIController> AuraAIController;
 	//这是 实例，蓝图里需要 设置一个 类
+	
+	UPROPERTY(BlueprintReadWrite, Category = "Combat")
+	TObjectPtr<AActor> CombatTarget;
 };

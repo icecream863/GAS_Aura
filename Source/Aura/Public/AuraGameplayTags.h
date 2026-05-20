@@ -63,9 +63,11 @@ public:
 	FGameplayTag Damage_Resistance_Arcane;
 	FGameplayTag Damage_Resistance_Physical;
 	
-	
 	//~ Set By Caller Tags
 	FGameplayTag Effect_HitReact;
+	
+	//Abilities
+	FGameplayTag Abilities_Attack;
 	
 protected:
 	

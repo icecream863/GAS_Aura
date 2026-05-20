@@ -24,7 +24,8 @@ class AURA_API ICombatInterface
 public:
 	virtual int32 GetPlayerLevel();  
 	
-	virtual FVector GetCombatSocketLocation();
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
+	FVector GetCombatSocketLocation();
 	
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)//这个函数只能在蓝图中实现，不能在C++中实现，如果C++中调用这个函数，必须在蓝图中实现，否则会报错。
 	void UpdateFacingTarget(const FVector& FacingTarget);
