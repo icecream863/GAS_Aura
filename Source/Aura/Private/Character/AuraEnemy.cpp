@@ -46,12 +46,16 @@ void AAuraEnemy::PossessedBy(AController* NewController)
 	if (!HasAuthority()) return; // 只在服务端执行，服务端才有AI Controller
 	AuraAIController = Cast<AAuraAIController>(NewController);
 	
-	AuraAIController->GetBlackboardComponent()->InitializeBlackboard(*BehaviorTree->BlackboardAsset);
-	//把黑板资源“装载”到 UBlackboardComponent 里
-	AuraAIController->RunBehaviorTree(BehaviorTree);
-	
-	AuraAIController->GetBlackboardComponent()->SetValueAsBool(FName("HitReacting"), false);
-	AuraAIController->GetBlackboardComponent()->SetValueAsBool(FName("IsRangedAttacker"), CharacterClass != ECharacterClass::Warrior);
+	// 【防崩溃保护】：如果蓝图里忘记配置BehaviorTree，或者Controller不是AAuraAIController，直接调用会引起崩溃。
+	if (AuraAIController && AuraAIController->GetBlackboardComponent() && BehaviorTree)
+	{
+		AuraAIController->GetBlackboardComponent()->InitializeBlackboard(*BehaviorTree->BlackboardAsset);
+		//把黑板资源“装载”到 UBlackboardComponent 里
+		AuraAIController->RunBehaviorTree(BehaviorTree);
+		
+		AuraAIController->GetBlackboardComponent()->SetValueAsBool(FName("HitReacting"), false);
+		AuraAIController->GetBlackboardComponent()->SetValueAsBool(FName("IsRangedAttacker"), CharacterClass != ECharacterClass::Warrior);
+	}
 }
 
 AActor* AAuraEnemy::GetCombatTarget_Implementation()
@@ -120,6 +124,7 @@ void AAuraEnemy::HitReactTagChanged(const FGameplayTag CallbackTag, int32 NewCou
 		GetCharacterMovement()->StopMovementImmediately();
 		if (AuraAIController)
 		{
+			// 清除当前的移动请求，防止受击动画结束后继续跑向原目标或在受击期间滑动
 			AuraAIController->StopMovement();
 		}
 	}
@@ -128,7 +133,6 @@ void AAuraEnemy::HitReactTagChanged(const FGameplayTag CallbackTag, int32 NewCou
 	{
 		AuraAIController->GetBlackboardComponent()->SetValueAsBool(FName("HitReacting"), bHitReact);
 	}
-
 	
 }
 
@@ -144,18 +148,30 @@ void AAuraEnemy::Die()
 
 void AAuraEnemy::HighLightActor()
 {
-	GetMesh()->SetRenderCustomDepth(true);
-	GetMesh()->SetCustomDepthStencilValue(CUSTOM_DEPTH_RED);
+	if (GetMesh())
+	{
+		GetMesh()->SetRenderCustomDepth(true);
+		GetMesh()->SetCustomDepthStencilValue(CUSTOM_DEPTH_RED);
+	}
 	
-	Weapon->SetRenderCustomDepth(true);
-	Weapon->SetCustomDepthStencilValue(CUSTOM_DEPTH_RED);
+	if (Weapon)
+	{
+		Weapon->SetRenderCustomDepth(true);
+		Weapon->SetCustomDepthStencilValue(CUSTOM_DEPTH_RED);
+	}
 }
 
 void AAuraEnemy::UnHighLightActor()
 {
-	GetMesh()->SetRenderCustomDepth(false);
+	if (GetMesh())
+	{
+		GetMesh()->SetRenderCustomDepth(false);
+	}
 	
-	Weapon->SetRenderCustomDepth(false);
+	if (Weapon)
+	{
+		Weapon->SetRenderCustomDepth(false);
+	}
 }
 
 int32 AAuraEnemy::GetPlayerLevel()
@@ -166,7 +182,10 @@ int32 AAuraEnemy::GetPlayerLevel()
 void AAuraEnemy::InitAbilityActorInfo()
 {
 	AbilitySystemComponent->InitAbilityActorInfo(this, this);
-	Cast<UAuraAbilitySystemComponent>(AbilitySystemComponent)->AbilityActorInfoSet();
+	if (UAuraAbilitySystemComponent* AuraASC = Cast<UAuraAbilitySystemComponent>(AbilitySystemComponent))
+	{
+		AuraASC->AbilityActorInfoSet();
+	}
 	
 	if (HasAuthority()) //GameMode 只存在于服务器，所以这个函数在客户端执行时会返回 空指针，因此要在服务端执行。
 	{

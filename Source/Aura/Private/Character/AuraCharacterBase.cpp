@@ -4,6 +4,7 @@
 #include "Character/AuraCharacterBase.h"
 
 #include "AbilitySystemComponent.h"
+#include "AuraGameplayTags.h"
 #include "AbilitySystem/AuraAbilitySystemComponent.h"
 #include "Aura/Aura.h"
 #include "Components/CapsuleComponent.h"
@@ -64,13 +65,47 @@ void AAuraCharacterBase::MulticastHandleDeath_Implementation()
 	GetMesh()->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Block);
 	
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	bDead = true;
+	
 }
 
 
-FVector AAuraCharacterBase::GetCombatSocketLocation_Implementation()
+FVector AAuraCharacterBase::GetCombatSocketLocation_Implementation(const FGameplayTag& MontageTag)
 {
-	check(Weapon);
-	return Weapon->GetSocketLocation(WeaponTipSocketName);
+	
+	if (MontageTag == FAuraGameplayTags::Get().Montage_Attack_Weapon && Weapon)
+	{
+		return Weapon->GetSocketLocation(WeaponTipSocketName);
+	}
+	
+	if (MontageTag == FAuraGameplayTags::Get().Montage_Attack_LeftHand)
+	{
+		return GetMesh()->GetSocketLocation(LeftHandSocketName);
+	}
+
+	if (MontageTag == FAuraGameplayTags::Get().Montage_Attack_RightHand)
+	{
+		return GetMesh()->GetSocketLocation(RightHandSocketName);
+	}
+	
+	return FVector::ZeroVector;
+	
+}
+
+bool AAuraCharacterBase::IsDead_Implementation() const
+{
+	return bDead;
+}
+
+AActor* AAuraCharacterBase::GetAvatar_Implementation() 
+{
+	return this;
+}
+
+TArray<FTaggedMontage> AAuraCharacterBase::GetAttackMontages_Implementation()
+{
+	return AttackMontages;
 }
 
 UAnimMontage* AAuraCharacterBase::GetHitReactMontage_Implementation()
@@ -98,7 +133,7 @@ void AAuraCharacterBase::InitialDefaultAttributes() const
 {
 	// 先初始化主属性，后续次属性可能会依赖主属性的数值（例如 MaxHealth 可能依赖 Vigor），所以先初始化主属性比较合理。当然具体顺序也要看你的设计需求。
 	ApplyEffectToSelf(DefaultPrimaryAttributes, 1.f);//intant
-	ApplyEffectToSelf(DefaultSecdaryAttributes, 1.f);//infinite
+	ApplyEffectToSelf(DefaultSecondaryAttributes, 1.f);//infinite
 	ApplyEffectToSelf(DefaultVitalAttributes, 1.f);//初始化为最大值，instant就行
 	//顺序很重要
 }

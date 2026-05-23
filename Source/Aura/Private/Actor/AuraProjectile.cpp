@@ -6,6 +6,7 @@
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponent.h"
 #include "NiagaraFunctionLibrary.h"
+#include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "Aura/Aura.h"
 #include "Components/AudioComponent.h"
 #include "Components/SphereComponent.h"
@@ -69,6 +70,11 @@ void AAuraProjectile::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, 
 	if (DamageEffectSpecHandle.Data.IsValid() && DamageEffectSpecHandle.Data.Get()->GetEffectContext().GetEffectCauser()== OtherActor)
 	{
 		return;//忽略自己（施法者/发射者）”**的重叠判定
+	}
+	
+	if ( !UAuraAbilitySystemLibrary::IsNotFriend(DamageEffectSpecHandle.Data.Get()->GetEffectContext().GetEffectCauser(), OtherActor) )
+	{
+		return;//忽略友方（队友/自己）”**的重叠判定
 	}
 	
 	if ( !bHit )

@@ -24,18 +24,31 @@ public:
 	
 	AAuraCharacterBase();
 	
+	UPROPERTY(EditAnywhere, Category = "Combat")
+	TArray<FTaggedMontage> AttackMontages;
+	
+	
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 	//这是重载 IAbilitySystemInterface里的函数
 	
 	UAttributeSet* GetAttributeSet() const{ return AttributeSet; }
-	virtual FVector GetCombatSocketLocation_Implementation() override;
-	virtual UAnimMontage* GetHitReactMontage_Implementation() override;
+	
 	virtual void BeginPlay() override;
 	
+	/** CombatInterface */
 	virtual void Die() override;
+	virtual UAnimMontage* GetHitReactMontage_Implementation() override;
+	virtual FVector GetCombatSocketLocation_Implementation(const FGameplayTag& MontageTag) override;
+	virtual bool IsDead_Implementation() const override;
+	virtual AActor* GetAvatar_Implementation()  override;
+	virtual TArray<FTaggedMontage> GetAttackMontages_Implementation() override;
+	/** End CombatInterface */
+	
+	
 
 	UFUNCTION(NetMulticast, Reliable)
 	virtual void MulticastHandleDeath();
+	
 	/**
 	 *这是一个在虚幻引擎 (Unreal Engine) 中声明的 多播 RPC (Remote Procedure Call) 函数。
 	 *UFUNCTION(NetMulticast, Reliable)：
@@ -75,12 +88,19 @@ protected:
 	
 	
 	
-	UPROPERTY(EditAnywhere, Category = "Combat")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat")
 	TObjectPtr<USkeletalMeshComponent> Weapon;
 	
 	UPROPERTY(EditAnywhere, Category = "Combat")
 	FName WeaponTipSocketName;
 	
+	UPROPERTY(EditAnywhere, Category = "Combat")
+	FName LeftHandSocketName;
+	
+	UPROPERTY(EditAnywhere, Category = "Combat")
+	FName RightHandSocketName;
+	
+	bool bDead = false;
 	
 	UPROPERTY()
 	TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
@@ -94,7 +114,7 @@ protected:
 	TSubclassOf<UGameplayEffect> DefaultPrimaryAttributes;
 	
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Attributes")
-	TSubclassOf<UGameplayEffect> DefaultSecdaryAttributes;
+	TSubclassOf<UGameplayEffect> DefaultSecondaryAttributes;
 	//用来初始化属性的GE，分别是主属性和次属性，蓝图里可以设置，或者直接在代码里设置默认值
 	
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Attributes")

@@ -167,10 +167,42 @@ void UAuraAbilitySystemLibrary::SetBlockedHit(FGameplayEffectContextHandle& Effe
 	}
 }
 
-void UAuraAbilitySystemLibrary::SetCriticalHit(FGameplayEffectContextHandle& EffectContextHandle, bool bInIsCritialHit)
+void UAuraAbilitySystemLibrary::SetCriticalHit(FGameplayEffectContextHandle& EffectContextHandle, bool bInIsCriticalHit)
 {
 	if (FAuraGameplayEffectContext* AuraEffectContext = static_cast<FAuraGameplayEffectContext*>(EffectContextHandle.Get()))
 	{
-		AuraEffectContext->SetCriticalHit(bInIsCritialHit);
+		AuraEffectContext->SetCriticalHit(bInIsCriticalHit);
 	}
+}
+
+void UAuraAbilitySystemLibrary::GetLivePlayersWithinRadius(const UObject* WorldContextObject,
+	TArray<AActor*>& OutOverlappingActors,const TArray<AActor*>& ActorsToIgnore, float Radius, const FVector& SphereOrigin)
+{
+	FCollisionQueryParams SphereParams;
+	SphereParams.AddIgnoredActors(ActorsToIgnore);
+	
+	TArray<FOverlapResult> Overlaps;
+	if (const UWorld* World = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull))
+	{
+		//它在指定位置以给定半径做球形碰撞查询，只检索动态对象类型，并把忽略列表应用到查询参数里；结果写入 `Overlaps`。
+		World->OverlapMultiByObjectType(Overlaps,SphereOrigin , FQuat::Identity, FCollisionObjectQueryParams(FCollisionObjectQueryParams::InitType::AllDynamicObjects), FCollisionShape::MakeSphere(Radius), SphereParams);
+		
+		for (FOverlapResult& Overlap : Overlaps)
+		{
+			if (Overlap.GetActor()->Implements<UCombatInterface>() && !ICombatInterface::Execute_IsDead(Overlap.GetActor()) )
+			{
+				OutOverlappingActors.AddUnique(Overlap.GetActor());
+			}
+		}
+	}
+
+}
+
+bool UAuraAbilitySystemLibrary::IsNotFriend(const AActor* FirstActor, const AActor* SecondActor)
+{
+	const bool bBothArePlayer = FirstActor->ActorHasTag("Player") && SecondActor->ActorHasTag("Player");
+	const bool bBothAreEnemy = FirstActor->ActorHasTag("Enemy") && SecondActor->ActorHasTag("Enemy");
+	
+	const bool bIsNotFriend = !(bBothArePlayer || bBothAreEnemy);
+	return bIsNotFriend;
 }

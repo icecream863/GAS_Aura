@@ -49,5 +49,13 @@ public:
 	//UPARAM(ref) 的作用是：告诉蓝图系统“这个参数是按引用传递的输入/输出参数”，让蓝图节点能真正修改调用者传进来的那个变量。不加可能变成 输出，因为是非const的引用参数,蓝图会当成输出。
 	
 	UFUNCTION(BlueprintCallable, Category = "AuraAbilitySystemLibrary | GameplayEffects")	
-	static void SetCriticalHit(UPARAM(ref) FGameplayEffectContextHandle& EffectContextHandle, bool bInIsCritialHit);
+	static void SetCriticalHit(UPARAM(ref) FGameplayEffectContextHandle& EffectContextHandle, bool bInIsCriticalHit);
+	
+	UFUNCTION(BlueprintCallable, Category = "AuraAbilitySystemLibrary | GameplayMechanics")	
+	static void GetLivePlayersWithinRadius(const UObject* WorldContextObject, TArray<AActor*>& OutOverlappingActors,const TArray<AActor*>& ActorsToIgnore, float Radius,const FVector& SphereOrigin);
+
+	UFUNCTION(BlueprintPure, Category = "AuraAbilitySystemLibrary | GameplayMechanics")	
+	static bool IsNotFriend(const AActor* FirstActor, const AActor* SecondActor);
+	
+	
 };

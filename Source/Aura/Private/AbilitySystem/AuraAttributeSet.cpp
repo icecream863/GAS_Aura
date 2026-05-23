@@ -179,10 +179,17 @@ void UAuraAttributeSet::ShowFloatingText(FEffectProperties& Props, float Damage,
 		 * 这样伤害数字才会在正确的客户端执行（不总是服务器上的玩家索引 0）。UGameplayStatics::GetPlayerController(GetWorld(), 0) 可能不适用于多人游戏或 AI 场景。
 		 * 在服务端用 index=0 取到的通常是“服务端本机的第一个PC（Listen Server 的主机PC）”
 		 */
-		if (AAuraPlayerController* PC = Cast<AAuraPlayerController>(Props.SourceController))
+		
+		if (AAuraPlayerController* PC = Cast<AAuraPlayerController>(Props.SourceController))//自己
+		{
+			PC->ShowDamageNumber(Damage, Props.TargetCharacter, bIsBlockedHit, bIsCriticalHit);
+			return;
+		}
+		if (AAuraPlayerController* PC = Cast<AAuraPlayerController>(Props.TargetController))//敌人
 		{
 			PC->ShowDamageNumber(Damage, Props.TargetCharacter, bIsBlockedHit, bIsCriticalHit);
 		}
+		
 	}
 }
 

@@ -66,6 +66,11 @@ public:
 	//~ Set By Caller Tags
 	FGameplayTag Effect_HitReact;
 	
+	//~ Montage Tags
+	FGameplayTag Montage_Attack_Weapon;
+	FGameplayTag Montage_Attack_LeftHand;
+	FGameplayTag Montage_Attack_RightHand;
+	
 	//Abilities
 	FGameplayTag Abilities_Attack;
 	

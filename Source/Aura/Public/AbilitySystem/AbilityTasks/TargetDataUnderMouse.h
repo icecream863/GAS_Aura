@@ -16,14 +16,13 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FMouseTargetDataSignature, const FGa
 UCLASS()
 class AURA_API UTargetDataUnderMouse : public UAbilityTask
 {
-	GENERATED_BODY()
+ 	GENERATED_BODY()
 	
-	public:
-	
+public:
 	/*HidePin = "OwningAbility"：把参数 OwningAbility 在蓝图节点上隐藏，不让你手动接线。
 	DefaultToSelf = "OwningAbility"：即使隐藏了，也自动把当前上下文对象（Self）作为这个参数传进去。
 	*/
-	UFUNCTION(BlueprintCallable, Category = "Ability|Task", meta = (HidePin = "OwningAbility", DefaultToSelf = "OwningAbility", display = "TargetDataUnderMouse"))//课程里displayname改了名字
+	UFUNCTION(BlueprintCallable, Category = "Ability|Task", meta = (HidePin = "OwningAbility", DefaultToSelf = "OwningAbility", display = "TargetDataUnderMouse"))//课程里display name改了名字
 	static UTargetDataUnderMouse* CreateTargetDataUnderMouse(UGameplayAbility* OwningAbility);
 	
 	UPROPERTY(BlueprintAssignable)

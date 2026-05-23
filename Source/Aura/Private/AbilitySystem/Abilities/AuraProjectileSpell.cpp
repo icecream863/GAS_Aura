@@ -28,7 +28,7 @@ void UAuraProjectileSpell::SpawnProjectile(const FVector& ProjectileTargetLocati
 	if (AvatarActor && AvatarActor->GetClass()->ImplementsInterface(UCombatInterface::StaticClass()))
 	{
 		// BlueprintNativeEvent 必须通过 Execute_XXX 调用，不能直接调用接口事件函数。
-		const FVector SocketLocation = ICombatInterface::Execute_GetCombatSocketLocation(AvatarActor);
+		const FVector SocketLocation = ICombatInterface::Execute_GetCombatSocketLocation(AvatarActor, FAuraGameplayTags::Get().Montage_Attack_Weapon);
 		
 		FRotator SpawnRotation = UKismetMathLibrary::FindLookAtRotation(SocketLocation, ProjectileTargetLocation);
 		

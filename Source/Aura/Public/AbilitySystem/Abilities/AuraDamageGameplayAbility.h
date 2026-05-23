@@ -14,10 +14,15 @@
  * 本质就是标签
  */
 
+struct FTaggedMontage;
+
 UCLASS()
 class AURA_API UAuraDamageGameplayAbility : public UAuraGameplayAbility
 {
 	GENERATED_BODY()
+public:
+	UFUNCTION(BlueprintCallable)
+	void CauseDamage(AActor* TargetActor); 
 	
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
@@ -26,5 +31,8 @@ protected:
 	
 	//伤害类型 及 对应的 数值
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Damage")
-	TMap<FGameplayTag, FScalableFloat> DamageTypeMap;
+	TMap<FGameplayTag, FScalableFloat> DamageTypeMap; //set by caller，先set 再 get
+	
+	UFUNCTION(BlueprintPure)
+	FTaggedMontage GetRandomTaggedMontageFromArray(const TArray<FTaggedMontage>& TaggedMontages);
 };
