@@ -143,6 +143,10 @@ void AAuraEnemy::Die()
 	* 倒计时开始：从调用这一行开始，经历 LifeSpan 秒的时间。
 	* 自动销毁：时间一到，引擎会自动安全地对这个 Actor（即这个敌人）调用 Destroy()，将其从游戏世界中移除并回收内存。
 	 */
+	if (AuraAIController && AuraAIController->GetBlackboardComponent())
+	{
+		AuraAIController->GetBlackboardComponent()->SetValueAsBool(FName("Dead"), true);
+	}
 	Super::Die();
 }
 

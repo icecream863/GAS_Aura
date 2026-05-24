@@ -8,3 +8,4 @@ Build/
 *.suo
 Plugins/Developer/RiderLink/
 .vs/
+.claude/settings.local.json
