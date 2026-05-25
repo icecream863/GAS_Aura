@@ -8,6 +8,7 @@
 #include "AbilitySystem/AuraAbilitySystemComponent.h"
 #include "Aura/Aura.h"
 #include "Components/CapsuleComponent.h"
+#include "Kismet/GameplayStatics.h"
 
 // Sets default values
 AAuraCharacterBase::AAuraCharacterBase()
@@ -54,6 +55,8 @@ void AAuraCharacterBase::Die()
 
 void AAuraCharacterBase::MulticastHandleDeath_Implementation()
 {
+	
+	UGameplayStatics::PlaySoundAtLocation(this, DeathSound, GetActorLocation());
 	//变成布娃娃形态
 	Weapon->SetSimulatePhysics(true);
 	Weapon->SetEnableGravity(true);
@@ -74,17 +77,17 @@ void AAuraCharacterBase::MulticastHandleDeath_Implementation()
 FVector AAuraCharacterBase::GetCombatSocketLocation_Implementation(const FGameplayTag& MontageTag)
 {
 	
-	if (MontageTag == FAuraGameplayTags::Get().Montage_Attack_Weapon && Weapon)
+	if (MontageTag == FAuraGameplayTags::Get().CombatSocket_Weapon && Weapon)
 	{
 		return Weapon->GetSocketLocation(WeaponTipSocketName);
 	}
 	
-	if (MontageTag == FAuraGameplayTags::Get().Montage_Attack_LeftHand)
+	if (MontageTag == FAuraGameplayTags::Get().CombatSocket_LeftHand)
 	{
 		return GetMesh()->GetSocketLocation(LeftHandSocketName);
 	}
 
-	if (MontageTag == FAuraGameplayTags::Get().Montage_Attack_RightHand)
+	if (MontageTag == FAuraGameplayTags::Get().CombatSocket_RightHand)
 	{
 		return GetMesh()->GetSocketLocation(RightHandSocketName);
 	}
@@ -106,6 +109,23 @@ AActor* AAuraCharacterBase::GetAvatar_Implementation()
 TArray<FTaggedMontage> AAuraCharacterBase::GetAttackMontages_Implementation()
 {
 	return AttackMontages;
+}
+
+UNiagaraSystem* AAuraCharacterBase::GetBloodEffect_Implementation()
+{
+	return BloodEffect;
+}
+
+FTaggedMontage AAuraCharacterBase::GetTaggedMontageByTag_Implementation(const FGameplayTag& MontageTag)
+{
+	for (FTaggedMontage& TaggedMontage : AttackMontages)
+	{
+		if (TaggedMontage.MontageTag == MontageTag)
+		{
+			return TaggedMontage;
+		}
+	}
+	return FTaggedMontage();
 }
 
 UAnimMontage* AAuraCharacterBase::GetHitReactMontage_Implementation()

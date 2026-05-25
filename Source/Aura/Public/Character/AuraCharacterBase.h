@@ -4,8 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "AbilitySystemInterface.h"
-
-
+#include "NiagaraSystem.h"
 #include "GameFramework/Character.h"
 #include "Interaction/CombatInterface.h"
 #include "AuraCharacterBase.generated.h"
@@ -42,6 +41,8 @@ public:
 	virtual bool IsDead_Implementation() const override;
 	virtual AActor* GetAvatar_Implementation()  override;
 	virtual TArray<FTaggedMontage> GetAttackMontages_Implementation() override;
+	virtual UNiagaraSystem* GetBloodEffect_Implementation() override;
+	virtual FTaggedMontage GetTaggedMontageByTag_Implementation(const FGameplayTag& MontageTag) override;
 	/** End CombatInterface */
 	
 	
@@ -86,8 +87,7 @@ public:
 	
 protected:
 	
-	
-	
+	//~ Combat
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat")
 	TObjectPtr<USkeletalMeshComponent> Weapon;
 	
@@ -99,6 +99,13 @@ protected:
 	
 	UPROPERTY(EditAnywhere, Category = "Combat")
 	FName RightHandSocketName;
+	
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Combat")
+	UNiagaraSystem* BloodEffect;
+	
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Combat")
+	USoundBase* DeathSound;
+	//~ End Combat
 	
 	bool bDead = false;
 	
@@ -120,7 +127,7 @@ protected:
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Attributes")
 	TSubclassOf<UGameplayEffect> DefaultVitalAttributes;
 	
-	
+
 	void ApplyEffectToSelf(TSubclassOf<UGameplayEffect> GameplayEffectClass, float Level) const;
 	
 	virtual void InitialDefaultAttributes() const;
