@@ -92,6 +92,11 @@ FVector AAuraCharacterBase::GetCombatSocketLocation_Implementation(const FGamepl
 		return GetMesh()->GetSocketLocation(RightHandSocketName);
 	}
 	
+	if (MontageTag == FAuraGameplayTags::Get().CombatSocket_Trail)
+	{
+		return GetMesh()->GetSocketLocation(TailSocketName);
+	}
+	
 	return FVector::ZeroVector;
 	
 }
@@ -128,6 +133,16 @@ FTaggedMontage AAuraCharacterBase::GetTaggedMontageByTag_Implementation(const FG
 	return FTaggedMontage();
 }
 
+int32 AAuraCharacterBase::GetMinionCount_Implementation()
+{
+	return MinionCount;
+}
+
+void AAuraCharacterBase::IncrementMinionCount_Implementation(int32 Amount)
+{
+	MinionCount += Amount;
+}
+
 UAnimMontage* AAuraCharacterBase::GetHitReactMontage_Implementation()
 {
 	return HitReactMontage;
@@ -152,7 +167,7 @@ void AAuraCharacterBase::ApplyEffectToSelf(TSubclassOf<UGameplayEffect> Gameplay
 void AAuraCharacterBase::InitialDefaultAttributes() const
 {
 	// 先初始化主属性，后续次属性可能会依赖主属性的数值（例如 MaxHealth 可能依赖 Vigor），所以先初始化主属性比较合理。当然具体顺序也要看你的设计需求。
-	ApplyEffectToSelf(DefaultPrimaryAttributes, 1.f);//intant
+	ApplyEffectToSelf(DefaultPrimaryAttributes, 1.f);//instant
 	ApplyEffectToSelf(DefaultSecondaryAttributes, 1.f);//infinite
 	ApplyEffectToSelf(DefaultVitalAttributes, 1.f);//初始化为最大值，instant就行
 	//顺序很重要

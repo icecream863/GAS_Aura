@@ -175,7 +175,7 @@ void UExecCalc_Damage::Execute_Implementation(const FGameplayEffectCustomExecuti
 		// 用 FindChecked：1) const 安全；2) 缺失时会直接 assert，定位更清晰
 		const FGameplayEffectAttributeCaptureDefinition& CaptureDef = DamageStatics().TagsToCaptureDefs.FindChecked(ResistanceTag);
 		
-		float DamageTypeValue =  Spec.GetSetByCallerMagnitude(Pair.Key);//从 GE 的 SetByCaller 里获取这个伤害类型的伤害值,没有返回 0
+		float DamageTypeValue =  Spec.GetSetByCallerMagnitude(Pair.Key, false);//从 GE 的 SetByCaller 里获取这个伤害类型的伤害值,没有返回 0
 		
 		float Resistance = 0.f;
 		ExecutionParams.AttemptCalculateCapturedAttributeMagnitude(CaptureDef, EvaluationParameters, Resistance);

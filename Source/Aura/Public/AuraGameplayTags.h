@@ -70,6 +70,7 @@ public:
 	FGameplayTag CombatSocket_Weapon;
 	FGameplayTag CombatSocket_LeftHand;
 	FGameplayTag CombatSocket_RightHand;
+	FGameplayTag CombatSocket_Trail;
 	
 	//~ 蒙太奇 动画 标签
 	FGameplayTag Montage_Attack_1;
@@ -77,9 +78,10 @@ public:
 	FGameplayTag Montage_Attack_3;
 	FGameplayTag Montage_Attack_4;
 
-	//Abilities
+	// AI 技能触发标签
 	FGameplayTag Abilities_Attack;
-	
+	FGameplayTag Abilities_Summon;
+
 protected:
 	
 private:
