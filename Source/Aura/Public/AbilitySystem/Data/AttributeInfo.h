@@ -32,6 +32,8 @@ struct FAuraAttributeInfo
  * 例如，UI界面可以通过绑定这个数据资产来显示属性的名称、描述和数值，或者在属性变化时根据标签查找对应的属性信息来更新显示
  * 通过使用数据资产，可以集中管理属性相关的信息，方便调整和扩展属性系统，而不需要修改代码逻辑
  */
+
+// 属性菜单 controller 会更新和广播 这个数据资产
 UCLASS()
 class AURA_API UAttributeInfo : public UDataAsset
 {

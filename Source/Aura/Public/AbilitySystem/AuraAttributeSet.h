@@ -95,15 +95,9 @@ public:
 	* UI 通常在 OnRep 里刷新；服务器本地修改不会自动走 OnRep（需手动调用或走 ASC 的通知）。
 	*/
 	
-	/**TMap<FGameplayTag, FAttributeSignature> TagsToAttribute;
-	*~ 属性委托映射表：把属性和对应的 Getter 委托绑定，方便在蓝图里通过属性访问器来获取属性值（例如 UI 绑定）。
-	*~ 这里使用 FBaseStaticDelegateInstance 来存储静态函数指针（属性访问器通常是静态函数），并且指定了返回值和用户策略。
-	* 这里FBaseStaticDelegateInstance也可以有其他表示方法，本质就是函数指针的封装，方便在蓝图里绑定和调用。
-	* 例如可替换为 FGameplayAttribute(*)()
-	* 或者觉得太长可以 typedef TBaseStaticDelegateInstance,用uisng 可以做成模板
-	* 上面用了 using 定义了 TStaticFuncPtr 来简化类型，表示一个无参数、返回 FGameplayAttribute 的静态函数指针。
-	*/
+	
 	TMap<FGameplayTag, TStaticFuncPtr<FGameplayAttribute()>> TagsToAttribute;
+	// 标签与属性 绑定, 注意是属性，不是属性值，所以返回类型是 FGameplayAttribute（包含属性的元信息），而不是 float（属性值）。
 	
 	
 	//~ Vital Attributes

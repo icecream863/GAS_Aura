@@ -4,10 +4,13 @@
 
 #include "CoreMinimal.h"
 #include "GameplayTagContainer.h"
+#include "AbilitySystem/AuraAbilitySystemComponent.h"
+#include "AbilitySystem/Data/AbilityInfo.h"
 #include "UI/WidgetController/AuraWidgetController.h"
 #include "OverlayWidgetController.generated.h"
 
 
+class UAbilityInfo;
 // datatable 的 row struct， 需要继承 FTableRowBase
 USTRUCT(BlueprintType)
 struct FUIWidgetRow : public FTableRowBase
@@ -42,7 +45,7 @@ UObject 派生类的指针（例如 AActor*、UTexture2D*）
 结构体（USTRUCT 标记的类型）
 其他蓝图可识别的特殊类型（如 FString、FName、FText） */
 
-
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FAbilityInfoSignature, FAuraAbilityInfo, Info);
 
 
 /**
@@ -81,14 +84,21 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "GAS|Message")
 	FMessageUIWidgetRowSignature MessageWidgetRowDelegate;
 	
+	UPROPERTY(BlueprintAssignable, Category = "GAS|Message")
+	FAbilityInfoSignature AbilityInfoDelegate;
+	
 protected:
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Widget Data")
 	TObjectPtr<UDataTable> MessageWidgetDataTable;
 	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Widget Data")
+	TObjectPtr<UAbilityInfo> AbilityInfo;
+	
 	template<typename T>
 	static T* GetDataTableRowByTag(UDataTable* DataTable, const FGameplayTag& Tag);
 	
+	void OnInitializeStartupAbilities(UAuraAbilitySystemComponent* AuraASC);
 };
 
 

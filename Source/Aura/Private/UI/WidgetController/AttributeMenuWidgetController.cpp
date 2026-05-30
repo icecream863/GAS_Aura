@@ -39,7 +39,6 @@ void UAttributeMenuWidgetController::BindCallbacksToDependencies()//在get里调
 		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(Pair.Value()).AddLambda(
 			[this, Pair](const FOnAttributeChangeData& Data)
 			{
-				
 				BroadcastAttributeInfo(Pair.Key, Pair.Value());
 			});
 	}

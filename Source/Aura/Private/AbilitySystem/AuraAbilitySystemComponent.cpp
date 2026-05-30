@@ -4,6 +4,8 @@
 #include "AbilitySystem/AuraAbilitySystemComponent.h"
 #include "AuraGameplayTags.h"
 #include "AbilitySystem/Abilities/AuraGameplayAbility.h"
+#include "Aura/AuraLogChannels.h"
+
 
 
 // ~-在AbilityActorInfoSet函数中，我们将EffectApplied函数绑定到OnGameplayEffectAppliedDelegateToSelf委托上，这样每当一个GameplayEffect被应用到这个AbilitySystemComponent时，EffectApplied函数就会被调用。
@@ -18,8 +20,20 @@ void UAuraAbilitySystemComponent::ClientEffectApplied_Implementation(UAbilitySys
 {
 	FGameplayTagContainer TagContainer;
 	EffectSpec.GetAllAssetTags(TagContainer);
-	EffectAssetTags.Broadcast(TagContainer);
+	EffectAssetTagsDelegate.Broadcast(TagContainer);
 }
+
+void UAuraAbilitySystemComponent::OnRep_ActivateAbilities()
+{
+	Super::OnRep_ActivateAbilities();
+	
+	if (!bStartupAbilitiesGiven)
+	{
+		bStartupAbilitiesGiven = true;
+		AbilityGivenDelegate.Broadcast(this);
+	}//只需要在第一次 添加技能时广播， 因为广播的是 ASC， 
+}
+
 
 void UAuraAbilitySystemComponent::AbilityInputTagHeld(const FGameplayTag& InputTag)
 {
@@ -42,8 +56,8 @@ void UAuraAbilitySystemComponent::AbilityInputTagHeld(const FGameplayTag& InputT
 
 void UAuraAbilitySystemComponent::AbilityInputTagReleased(const FGameplayTag& InputTag)
 {
-	if (!InputTag.IsValid()) return;
 	
+	if (!InputTag.IsValid()) return;
 	for (FGameplayAbilitySpec& AbilitySpec : GetActivatableAbilities())
 	{
 		if (AbilitySpec.DynamicAbilityTags.HasTagExact(InputTag))
@@ -67,8 +81,54 @@ void UAuraAbilitySystemComponent::AddCharacterAbility(const TArray<TSubclassOf<U
 			AbilitySpec.DynamicAbilityTags.AddTag(AuraGameplayAbility->StartupInputTag);
 			GiveAbility(AbilitySpec);
 		}
-		
 	}
+	
+	bStartupAbilitiesGiven = true;
+	AbilityGivenDelegate.Broadcast(this);//只发生在服务端
+}
+
+void UAuraAbilitySystemComponent::ForEachAbility(const FForEachAbility& Delegate)
+{
+	/*
+	*  作用域锁：遍历可激活技能列表期间，禁止 GAS 在回调/重入中修改 AbilitySpec 列表（增删/刷新）
+	*  避免遍历过程中容器变化导致的崩溃或不一致；离开作用域自动解锁（RAII）
+	*/
+	FScopedAbilityListLock ActiveScopeLock(*this);
+	
+	for (FGameplayAbilitySpec& AbilitySpec : GetActivatableAbilities())
+	{
+		if (!Delegate.ExecuteIfBound(AbilitySpec)) //这里在执行 委托
+		{
+			UE_LOG(LogAura, Error, TEXT("ForEachAbility: Delegate execution failed for ability %s"), *AbilitySpec.Ability->GetName());
+		}
+	}
+}
+
+FGameplayTag UAuraAbilitySystemComponent::GetAbilityTagFromSpec(const FGameplayAbilitySpec& AbilitySpec)
+{
+	if (AbilitySpec.Ability)
+	{
+		for (const FGameplayTag& Tag : AbilitySpec.Ability.Get()->AbilityTags)
+		{
+			if (Tag.MatchesTag(FGameplayTag::RequestGameplayTag(FName("Abilities"))))
+			{
+				return Tag;
+			}
+		}
+	}
+	return FGameplayTag();
+}
+
+FGameplayTag UAuraAbilitySystemComponent::GetInputTagFromSpec(const FGameplayAbilitySpec& AbilitySpec)
+{
+	for (const FGameplayTag& Tag : AbilitySpec.DynamicAbilityTags)//AddCharacterAbility里添加的标签
+	{
+		if (Tag.MatchesTag(FGameplayTag::RequestGameplayTag(FName("InputTag"))))
+		{
+			return Tag;
+		}
+	}
+	return FGameplayTag();
 }
 
 

@@ -6,7 +6,10 @@
 #include "AbilitySystemComponent.h"
 #include "AuraAbilitySystemComponent.generated.h"
 
+class UAuraAbilitySystemComponent;
 DECLARE_MULTICAST_DELEGATE_OneParam(FEffectAssetTags, FGameplayTagContainer& /*AssetTagContainer*/);
+DECLARE_MULTICAST_DELEGATE_OneParam(FAbilityGiven, UAuraAbilitySystemComponent*);
+DECLARE_DELEGATE_OneParam(FForEachAbility, FGameplayAbilitySpec&);
 
 /**
  * 
@@ -22,9 +25,10 @@ protected:
 	
 	UFUNCTION(Client, Reliable) // ~-Client: 这个函数将在客户端执行，服务器调用这个函数时，函数体内的代码会在客户端运行。
 	void ClientEffectApplied(UAbilitySystemComponent* AbilitySystemComponent, const FGameplayEffectSpec& EffectSpec, FActiveGameplayEffectHandle ActiveEffectHandle) const;
+	// 服务端只调用，不执行，客户端执行，因为 这种UI 不需要在服务器执行，服务器只需要广播标签就行了
 	
-	
-public:
+	virtual void OnRep_ActivateAbilities() override;
+	//当 ActivatableAbilities （可激活能力列表）发生 网络复制 时自动调用
 	
 public:
 	/** 初始化 ASC 的 ActorInfo，并注册 GameplayEffect 应用回调（用于后续在客户端广播效果标签等）。 */
@@ -32,9 +36,12 @@ public:
 	
 	/** 
 	 * 当有 GameplayEffect 应用到自身时，把该效果的 Asset Tags 通过此委托广播出去。
-	 * 常用于 UI\(/\)提示\(/\)音效等监听“发生了带哪些标签的效果”。
+	 * 常用于 UI提示音效等监听“发生了带哪些标签的效果”。
 	 */
-	FEffectAssetTags EffectAssetTags;
+	FEffectAssetTags EffectAssetTagsDelegate;
+	FAbilityGiven AbilityGivenDelegate; // ~-当角色被授予能力时广播，常用于 UI 监听角色能力变化。
+	
+	bool bStartupAbilitiesGiven = false; // 避免先广播再绑定。
 	
 	/**
 	 * 输入标签被按住时触发：遍历可激活能力，找到匹配该输入标签的能力并通知 GAS 输入按下，
@@ -63,4 +70,9 @@ public:
 	如果技能结束了，但你还没松手，Held 会在下一帧检测到 !IsActive()，从而再次自动调用 TryActivateAbility。
 	*/
 	
+	
+	void ForEachAbility(const FForEachAbility& Delegate);
+
+	static FGameplayTag GetAbilityTagFromSpec(const FGameplayAbilitySpec& AbilitySpec);
+	static FGameplayTag GetInputTagFromSpec(const FGameplayAbilitySpec& AbilitySpec);
 };

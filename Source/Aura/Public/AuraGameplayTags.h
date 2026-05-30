@@ -78,11 +78,14 @@ public:
 	FGameplayTag Montage_Attack_3;
 	FGameplayTag Montage_Attack_4;
 
-	// AI 技能触发标签
+	//  技能触发标签
 	FGameplayTag Abilities_Attack;
 	FGameplayTag Abilities_Summon;
+	FGameplayTag Abilities_Fire_FireBolt;
+	
+	//~ 技能冷却标签
+	FGameplayTag Cooldown_Fire_FireBolt;
 
-protected:
 	
 private:
 	

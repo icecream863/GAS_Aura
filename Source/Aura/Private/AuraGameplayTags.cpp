@@ -63,7 +63,13 @@ void FAuraGameplayTags::InitializeNativeGameplayTags()
 	//技能
 	GameplayTags.Abilities_Attack = UGameplayTagsManager::Get().AddNativeGameplayTag(FName("Abilities.Attack"), TEXT(""));
 	GameplayTags.Abilities_Summon = UGameplayTagsManager::Get().AddNativeGameplayTag(FName("Abilities.Summon"), TEXT(""));
+	
+	GameplayTags.Abilities_Fire_FireBolt = UGameplayTagsManager::Get().AddNativeGameplayTag(FName("Abilities.Fire.Firebolt"), TEXT(""));
 
+	//~ 技能冷却
+	GameplayTags.Cooldown_Fire_FireBolt = UGameplayTagsManager::Get().AddNativeGameplayTag(FName("Cooldown.Fire.Firebolt"), TEXT(""));
+
+	
 	//战斗插槽标签 ，动画的特定时机触发 的标签，通常用于动画通知（AnimNotify）来触发特定的游戏逻辑，比如伤害判定、特效播放等。
 	GameplayTags.CombatSocket_Weapon = UGameplayTagsManager::Get().AddNativeGameplayTag(FName("CombatSocket.Weapon"), TEXT(""));
 	GameplayTags.CombatSocket_LeftHand = UGameplayTagsManager::Get().AddNativeGameplayTag(FName("CombatSocket.LeftHand"), TEXT(""));

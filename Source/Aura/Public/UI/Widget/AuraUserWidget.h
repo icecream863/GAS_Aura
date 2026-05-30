@@ -25,8 +25,9 @@ protected:
 	UPROPERTY(BlueprintReadOnly)
 	TObjectPtr<UObject> WidgetController;
 	
-	//~ c++调用， 蓝图实现, 这是一个事件
-	// 有作用域 只在overlay蓝图实现， 在mana和heal蓝图中不会实现，不共用
+	//~ c++调用， 蓝图实现, 这是一个回调函数
+	// 限制，只有在 SetWidgetController 被调用后，才会触发 WidgetControllerSet 事件，确保蓝图逻辑在控制器被正确设置后执行。
+	// 主要是 理清谁在 调用，并在 调用这哪里实现
 	UFUNCTION(BlueprintImplementableEvent)
 	void WidgetControllerSet();
 	
