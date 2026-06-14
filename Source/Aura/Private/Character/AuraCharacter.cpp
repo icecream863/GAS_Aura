@@ -21,6 +21,7 @@ AAuraCharacter::AAuraCharacter()
 	bUseControllerRotationYaw = false;
 	bUseControllerRotationRoll = false;
 	
+	CharacterClass = ECharacterClass::Elementalist;
 }
 
 void AAuraCharacter::BeginPlay()

@@ -15,7 +15,10 @@
 
 AAuraProjectile::AAuraProjectile()
 {
- 	bReplicates = true;
+	SetReplicates(true);
+	//上面更好
+ 	//bReplicates = true;
+	//发射火球只在服务端执行，客户端通过火球开启复制来出现火球
 	PrimaryActorTick.bCanEverTick = false;
 
 	Sphere = CreateDefaultSubobject<USphereComponent>("Sphere");

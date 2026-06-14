@@ -3,6 +3,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "ScalableFloat.h"
+
 #include "Engine/DataAsset.h"
 #include "CharacterClassInfo.generated.h"
 
@@ -42,10 +44,11 @@ struct FCharacterClassDefaultInfo
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Class DefaultInfo")
 	TSubclassOf<UGameplayEffect> PrimaryAttribute;//GE初始化主属性，这个结构体在内部，由下面的 TMap 暴露
 	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Common Class DefaultInfo")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Class DefaultInfo")
 	TArray<TSubclassOf<UGameplayAbility>> StartupAbilities;
 	
-	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Class DefaultInfo")
+	FScalableFloat XPReward = FScalableFloat();//血量系数
 };
 
 
@@ -59,6 +62,7 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character Class DefaultInfo")
 	TMap<ECharacterClass, FCharacterClassDefaultInfo> CharacterClassInformation;//角色职业信息映射表
 	
+	// 获得角色默认属性， 不是公共属性
 	FCharacterClassDefaultInfo GetCharacterClassDefaultInfo(ECharacterClass CharacterClass);
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Common Class DefaultInfo")

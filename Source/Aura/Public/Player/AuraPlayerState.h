@@ -4,11 +4,14 @@
 
 #include "CoreMinimal.h"
 #include "AbilitySystemInterface.h"
+#include "AbilitySystem/Data/LevelUpInfo.h"
 #include "GameFramework/PlayerState.h"
 #include "AuraPlayerState.generated.h"
 
 class UAbilitySystemComponent;
 class UAttributeSet;
+
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnPlayerStateChanged, int32 /*State Value*/);
 
 /**
  * 
@@ -17,6 +20,7 @@ UCLASS()
 class AURA_API AAuraPlayerState : public APlayerState, public IAbilitySystemInterface
 {
 	GENERATED_BODY()
+	
 public:
 	AAuraPlayerState();
 	
@@ -26,8 +30,22 @@ public:
 	
 	UAttributeSet* GetAttributeSet() const{ return AttributeSet; }
 	
+	FOnPlayerStateChanged OnXPChangedDelegate;
+	FOnPlayerStateChanged OnLevelChangedDelegate;
+	
 	FORCEINLINE int32 GetPlayerLevel() const { return Level; }
-	// 小优化，可不用 ,forceinline，编译器也可能内联（尤其是开启优化后）。但如果函数体较大，forceinline 可能适得其反（增加编译时间和二进制体积），需要权衡使用。
+	FORCEINLINE int32 GetPlayerXP() const { return XP; }
+	
+	void SetXP(const int32 InXP);
+	void SetLevel(const int32 InLevel);
+	
+	void AddToXP(const int32 InXP);
+	void AddToLevel(const int32 InLevel);
+	
+	
+	UPROPERTY(EditDefaultsOnly)
+	TObjectPtr<ULevelUpInfo> LevelUpInfo;
+	
 protected:
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
@@ -39,8 +57,14 @@ private:
 	UPROPERTY(VisibleAnywhere, ReplicatedUsing = OnRep_Level)
 	int32 Level = 1;
 	
+	UPROPERTY(VisibleAnywhere, ReplicatedUsing = OnRep_XP)
+	int32 XP = 1;
+	
 	UFUNCTION()
 	void OnRep_Level(const int32 OldLevel);
+	
+	UFUNCTION()
+	void OnRep_XP(const int32 OldXP);
 };
 
 

@@ -100,6 +100,7 @@ void AAuraEnemy::BeginPlay()
 				OnMaxHealthChanged.Broadcast(Data.NewValue);
 			});
 		
+		// 玩家攻击 会 添加 Effect_HitReact 标签，移除时会移除标签，所以监听这个标签的添加和移除事件来切换受击状态
 		FAuraGameplayTags GameplayTags = FAuraGameplayTags::Get();
 		AbilitySystemComponent->RegisterGameplayTagEvent(GameplayTags.Effect_HitReact, EGameplayTagEventType::NewOrRemoved).
 		AddUObject(this, &AAuraEnemy::HitReactTagChanged);

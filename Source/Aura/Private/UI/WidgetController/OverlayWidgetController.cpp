@@ -6,6 +6,8 @@
 #include "AbilitySystem/AuraAbilitySystemComponent.h"
 #include "AbilitySystem/AuraAttributeSet.h"
 #include "AbilitySystem/Data/AbilityInfo.h"
+#include "Player/AuraPlayerState.h"
+
 
 void UOverlayWidgetController::BroadcastInitialValues()
 {	
@@ -21,6 +23,11 @@ void UOverlayWidgetController::BroadcastInitialValues()
 
 void UOverlayWidgetController::BindCallbacksToDependencies()//依赖是 AuraAttribute底层
 {
+	//绑定 经验条 
+	AAuraPlayerState* AuraPlayerState = CastChecked<AAuraPlayerState>(PlayerState);
+	AuraPlayerState->OnXPChangedDelegate.AddUObject(this, &UOverlayWidgetController::OnXPChanged);
+	
+	
 	// Super::BindCallbacksToDependencies(); 不需要继承父类函数，只需重载
 	const UAuraAttributeSet* AuraAttributeSet = CastChecked<UAuraAttributeSet>(AttributeSet);
 	
@@ -54,7 +61,7 @@ void UOverlayWidgetController::BindCallbacksToDependencies()//依赖是 AuraAttr
 		}
 		);
 	
-// ~ Tags
+// ~ Tags 初始化技能图标
 	if (UAuraAbilitySystemComponent* AuraASC = Cast<UAuraAbilitySystemComponent>(AbilitySystemComponent))
 	{
 		/*
@@ -73,7 +80,7 @@ void UOverlayWidgetController::BindCallbacksToDependencies()//依赖是 AuraAttr
 			//~ 如果广播未触发，绑定回调，等广播触发时回调被调用
 		}
 		
-		
+		// 当有 Message 标签的 GameplayEffect 应用时，广播对应 UI 数据给界面
 		AuraASC->EffectAssetTagsDelegate.AddLambda(
 		[this](FGameplayTagContainer& TagContainer)
 		{
@@ -113,6 +120,33 @@ void UOverlayWidgetController::OnInitializeStartupAbilities(UAuraAbilitySystemCo
 	AuraASC->ForEachAbility(BroadcastDelegate);
 	// ~ 遍历所有能力，广播给界面
 	// AbilityGivenDelegate(AuraASC) -->  每个技能 BroadcastDelegate(AbilitySpec) --> AbilityInfoDelegate(Info)
+}
+
+void UOverlayWidgetController::OnXPChanged(int32 NewXP)
+{
+	const AAuraPlayerState* AuraPlayerState = CastChecked<AAuraPlayerState>(PlayerState);
+	const ULevelUpInfo* LevelUpInfo = AuraPlayerState->LevelUpInfo;
+	
+	checkf(LevelUpInfo, TEXT("LevelUpInfo is null! Please assign a LevelUpInfo Data Asset to the PlayerState."));
+	
+	const int32 Level = LevelUpInfo->FindLevelForXP(NewXP);
+	const int32 MaxLevel = LevelUpInfo->LevelUpInformation.Num() - 1; // 因为下标0是占位，所以最大等级是数组长度减1
+	
+	if (Level <= MaxLevel && Level > 0)
+	{
+		const int32 XPForCurrentLevel = LevelUpInfo->LevelUpInformation[Level].LevelUpRequirement;
+		const int32 XPForPreviousLevel = LevelUpInfo->LevelUpInformation[Level - 1].LevelUpRequirement;
+		
+		const float XPPercent = (XPForCurrentLevel - XPForPreviousLevel) > 0 ? 
+			static_cast<float>(NewXP - XPForPreviousLevel) / (XPForCurrentLevel - XPForPreviousLevel) : 0.0f;
+		
+		OnXPPercentChangedDelegate.Broadcast(XPPercent);
+	}
+	else
+	{
+		OnXPPercentChangedDelegate.Broadcast(0.0f); // 超出范围，显示满格或空格
+	}
+	
 }
 
 

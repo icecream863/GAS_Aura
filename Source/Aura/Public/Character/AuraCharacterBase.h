@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "AbilitySystemInterface.h"
 #include "NiagaraSystem.h"
+#include "AbilitySystem/Data/CharacterClassInfo.h"
 #include "GameFramework/Character.h"
 #include "Interaction/CombatInterface.h"
 #include "AuraCharacterBase.generated.h"
@@ -45,6 +46,7 @@ public:
 	virtual FTaggedMontage GetTaggedMontageByTag_Implementation(const FGameplayTag& MontageTag) override;
 	virtual int32 GetMinionCount_Implementation() override;
 	virtual void IncrementMinionCount_Implementation(int32 Amount) override;
+	virtual ECharacterClass GetCharacterClassInfo_Implementation() override;
 	/** End CombatInterface */
 	
 	
@@ -110,6 +112,10 @@ protected:
 	
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Combat")
 	USoundBase* DeathSound;
+	
+	//不需要每个角色都 CharacterClassInfo,只需要一个全局的 CharacterClassInfo 就够了，角色类里只需要一个 CharacterClass 枚举来标识自己的职业类型就行了
+	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Character Class Default")
+	ECharacterClass CharacterClass = ECharacterClass::Warrior;//默认元素使
 	
 	/* End Combat  */
 	
