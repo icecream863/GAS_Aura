@@ -58,7 +58,7 @@ private:
 	int32 Level = 1;
 	
 	UPROPERTY(VisibleAnywhere, ReplicatedUsing = OnRep_XP)
-	int32 XP = 1;
+	int32 XP = 1; //这个才是真正的 XP，记录总经验值， incomingXP 是每次获得的经验值
 	
 	UFUNCTION()
 	void OnRep_Level(const int32 OldLevel);

@@ -33,14 +33,14 @@ public:
 	/** End EnemyInterface */
 	
 	/** CombatInterface */
-	virtual int32 GetPlayerLevel() override;
+	virtual int32 GetPlayerLevel_Implementation() override;
 	/** End CombatInterface */
 	
 	UPROPERTY(BlueprintAssignable, Category = "GAS|Attributes")
-	FOnAttributeChangeSignature OnHealthChanged;
+	FOnAttributeChangedSignature OnHealthChanged;
 	
 	UPROPERTY(BlueprintAssignable, Category = "GAS|Attributes")
-	FOnAttributeChangeSignature OnMaxHealthChanged;
+	FOnAttributeChangedSignature OnMaxHealthChanged;
 	
 	virtual void BeginPlay() override;
 	

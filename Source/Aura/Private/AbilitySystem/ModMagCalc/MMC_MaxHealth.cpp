@@ -34,7 +34,7 @@ float UMMC_MaxHealth::CalculateBaseMagnitude_Implementation(const FGameplayEffec
 	
 	ICombatInterface* CombatInterface = Cast<ICombatInterface>(Spec.GetContext().GetSourceObject());
 	check(CombatInterface);
-	const int32 PlayerLevel = CombatInterface->GetPlayerLevel();
+	const int32 PlayerLevel = ICombatInterface::Execute_GetPlayerLevel(Spec.GetContext().GetSourceObject());
 	
 	return 80.f + 2.5f * Vigor + 10.f * PlayerLevel;//~ 这个公式是我随便写的，实际游戏里可以根据需要调整
 	//这就是自定义计算公式的地方，我们可以根据Vigor属性和玩家等级来计算最大生命值的基数。

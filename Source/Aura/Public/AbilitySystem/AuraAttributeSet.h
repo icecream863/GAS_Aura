@@ -189,7 +189,7 @@ public:
 	ATTRIBUTE_ACCESSORS(UAuraAttributeSet, PhysicalResistance);
 	
 	/**
-	 *	Meta Attribute
+	 *	Meta Attribute 中间属性/过程属性
 		1. 处理伤害的临时缓冲：在受到攻击时，GameplayEffect (GE) 通常不会直接修改 Health（生命值），而是把基础伤害值赋予给 IncomingDamage 这个元属性。 
 		2. 支持复杂的结算逻辑：当带有 IncomingDamage 的 GE 结算时，会在 PostGameplayEffectExecute (或者 Execution Calculation) 里拦截到这个值。此时你可以结合目标当前的 Armor（护甲）、BlockChance（格挡几率）等次级属性进行统一计算，得出最终的实际伤害后，再去扣除 Health。 
 		3. 无需网络同步（非状态属性）：与 Health 或 Mana 这种持续存在且需要同步的常规属性不同，元属性是用于过程中计算的临时变量。因此你会发现它的 UPROPERTY 中没有 ReplicatedUsing 标签，它不需要且不应该跨网络复制，通常在伤害结算完成后就会被清零。 
@@ -198,6 +198,11 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Meta Attribute")
 	FGameplayAttributeData IncomingDamage;
 	ATTRIBUTE_ACCESSORS(UAuraAttributeSet, IncomingDamage);
+	
+	
+	UPROPERTY(BlueprintReadOnly, Category = "Meta Attribute")
+	FGameplayAttributeData IncomingXP;
+	ATTRIBUTE_ACCESSORS(UAuraAttributeSet, IncomingXP);
 	
 	
 	
@@ -269,4 +274,6 @@ private:
 	void SetEffectProperties(const struct FGameplayEffectModCallbackData& Data, FEffectProperties& Props);
 	
 	void ShowFloatingText(FEffectProperties& Props, float Damage, bool bIsBlockedHit, bool bIsCriticalHit);
+	
+	void SendXPEvent(FEffectProperties& Props);
 };

@@ -15,9 +15,9 @@
 
 AAuraProjectile::AAuraProjectile()
 {
-	SetReplicates(true);
-	//上面更好
- 	//bReplicates = true;
+	//SetReplicates(true);
+	//上面更好,但是要 初始化完成后才用
+ 	bReplicates = true;
 	//发射火球只在服务端执行，客户端通过火球开启复制来出现火球
 	PrimaryActorTick.bCanEverTick = false;
 

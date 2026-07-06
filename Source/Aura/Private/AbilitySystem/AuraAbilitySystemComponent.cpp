@@ -87,6 +87,19 @@ void UAuraAbilitySystemComponent::AddCharacterAbility(const TArray<TSubclassOf<U
 	AbilityGivenDelegate.Broadcast(this);//只发生在服务端
 }
 
+void UAuraAbilitySystemComponent::AddPassiveCharacterAbility(const TArray<TSubclassOf<UGameplayAbility>>& StartupPassiveAbilities)
+{
+	
+	for (const TSubclassOf<UGameplayAbility> StartupAbility : StartupPassiveAbilities)
+	{
+		FGameplayAbilitySpec AbilitySpec = FGameplayAbilitySpec(StartupAbility, 1);
+		GiveAbilityAndActivateOnce(AbilitySpec);
+	}
+	
+}
+
+
+
 void UAuraAbilitySystemComponent::ForEachAbility(const FForEachAbility& Delegate)
 {
 	/*

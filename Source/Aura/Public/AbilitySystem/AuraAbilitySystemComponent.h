@@ -60,6 +60,8 @@ public:
 	 */
 	void AddCharacterAbility(const TArray<TSubclassOf<UGameplayAbility>>& StartupAbilities);
 	
+	void AddPassiveCharacterAbility(const TArray<TSubclassOf<UGameplayAbility>>& StartupPassiveAbilities);
+	
 	/** 只在 Held 逻辑里调用 TryActivateAbility 确实是核心逻辑所在
 	* 1. 为什么要放在 Held 而不是 Pressed？
 	在 GAS 处理输入时，将激活逻辑放在 Held 主要是为了支持自动施法/连发或者蓄力技能。

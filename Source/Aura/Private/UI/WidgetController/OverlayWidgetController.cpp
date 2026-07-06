@@ -26,6 +26,11 @@ void UOverlayWidgetController::BindCallbacksToDependencies()//依赖是 AuraAttr
 	//绑定 经验条 
 	AAuraPlayerState* AuraPlayerState = CastChecked<AAuraPlayerState>(PlayerState);
 	AuraPlayerState->OnXPChangedDelegate.AddUObject(this, &UOverlayWidgetController::OnXPChanged);
+	AuraPlayerState->OnLevelChangedDelegate.AddLambda(
+	[this](int32 NewLevel)
+	{
+		OnPlayerLevelChangedDelegate.Broadcast(NewLevel);
+	} );
 	
 	
 	// Super::BindCallbacksToDependencies(); 不需要继承父类函数，只需重载

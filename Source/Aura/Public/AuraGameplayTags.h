@@ -86,6 +86,8 @@ public:
 	//~ 技能冷却标签
 	FGameplayTag Cooldown_Fire_FireBolt;
 
+	//~ 经验
+	FGameplayTag Attributes_Meta_IncomingXP;
 	
 private:
 	

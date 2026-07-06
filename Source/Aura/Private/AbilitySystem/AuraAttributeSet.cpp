@@ -6,8 +6,10 @@
 #include "AuraGameplayTags.h"
 #include "GameplayEffectExtension.h"
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
+
 #include "GameFramework/Character.h"
 #include "Interaction/CombatInterface.h"
+#include "Interaction/PlayerInterface.h"
 #include "Net/UnrealNetwork.h"
 #include "Player/AuraPlayerController.h"
 
@@ -117,7 +119,6 @@ void UAuraAttributeSet::PostGameplayEffectExecute(const struct FGameplayEffectMo
 	if (Data.EvaluatedData.Attribute == GetHealthAttribute())
 	{
 		SetHealth(FMath::Clamp(GetHealth(), 0.f, GetMaxHealth()));
-		UE_LOG(LogTemp, Warning, TEXT("PostGameplayEffectExecute: %s Health clamped to %f"), *Props.TargetAvatarActor->GetName() ,GetHealth());
 	}
 
 	if (Data.EvaluatedData.Attribute == GetManaAttribute())
@@ -143,6 +144,8 @@ void UAuraAttributeSet::PostGameplayEffectExecute(const struct FGameplayEffectMo
 				{
 					CombatInterface->Die();
 				}
+				
+				SendXPEvent(Props);
 			}
 			else
 			{
@@ -159,8 +162,42 @@ void UAuraAttributeSet::PostGameplayEffectExecute(const struct FGameplayEffectMo
 			ShowFloatingText(Props, LocalIncomingDamage, bIsBlockedHit, bIsCriticalHit);
 			
 		}
+	}
+	
+	if (Data.EvaluatedData.Attribute == GetIncomingXPAttribute())
+	{
+		const float LocalIncomingXP = GetIncomingXP();
+		SetIncomingXP(0.f);
 		
-		
+		// 来源就是自己， 因为 技能里 触发 ge 修改自己的 IncomingXP
+		if (Props.SourceCharacter->Implements<UPlayerInterface>() && Props.SourceCharacter->Implements<UCombatInterface>())
+		{
+			const int32 CurrentXP = IPlayerInterface::Execute_GetXP(Props.SourceCharacter);
+			const int32 CurentLevel = ICombatInterface::Execute_GetPlayerLevel(Props.SourceCharacter);
+			
+			int32 NewLevel = IPlayerInterface::Execute_FindLevelForXP(Props.SourceCharacter, CurrentXP + LocalIncomingXP);
+			int32 NumLevelUps = NewLevel - CurentLevel;
+			
+			if (NumLevelUps > 0)
+			{
+				const int32 AttributePointsReward = IPlayerInterface::Execute_GetAttributePointsReward(Props.SourceCharacter, CurentLevel);
+				const int32 SpellPointsReward = IPlayerInterface::Execute_GetSpellPointsReward(Props.SourceCharacter, CurentLevel);
+				// TODO: 这里可以考虑把奖励点数的计算逻辑放到 PlayerState 里，避免每次都查表。
+				// TODO: 为什么是 CurrentLevel
+				
+				IPlayerInterface::Execute_AddToPlayerLevel(Props.SourceCharacter, NumLevelUps);
+				IPlayerInterface::Execute_AddToAttributePoints(Props.SourceCharacter, AttributePointsReward);
+				IPlayerInterface::Execute_AddToSpellPoints(Props.SourceCharacter, SpellPointsReward);
+				
+				SetHealth(GetMaxHealth());	
+				SetMana(GetMaxMana());
+				
+				IPlayerInterface::Execute_LevelUp(Props.SourceCharacter);
+			}
+			
+			IPlayerInterface::Execute_AddToXP(Props.SourceCharacter, LocalIncomingXP);// source是玩家，因为攻击是由玩家发起的
+			//里面有广播
+		}
 	}
 	
 	 /* 这里限制 base value
@@ -191,6 +228,28 @@ void UAuraAttributeSet::ShowFloatingText(FEffectProperties& Props, float Damage,
 		}
 		
 	}
+}
+
+void UAuraAttributeSet::SendXPEvent(FEffectProperties& Props)
+{
+	if (Props.TargetCharacter && Props.TargetCharacter->Implements<UCombatInterface>())
+	{
+		const int32 TargetLevel = ICombatInterface::Execute_GetPlayerLevel(Props.TargetCharacter);
+		const ECharacterClass TargetClass = ICombatInterface::Execute_GetCharacterClass(Props.TargetCharacter);
+		// blueprint native event 不能直接调用，需要用 Execute_ 前缀来调用接口函数
+		const int32 XPReward = UAuraAbilitySystemLibrary::GetRewardForClassAndLevel(Props.TargetCharacter,TargetClass, TargetLevel);		
+		
+		const FAuraGameplayTags GameplayTags = FAuraGameplayTags::Get();
+		
+		FGameplayEventData Payload;
+		Payload.EventTag = GameplayTags.Attributes_Meta_IncomingXP;
+		Payload.EventMagnitude = XPReward; 
+		
+		UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(Props.SourceCharacter, GameplayTags.Attributes_Meta_IncomingXP, Payload);
+		
+		
+	}
+	
 }
 
 void UAuraAttributeSet::SetEffectProperties(const struct FGameplayEffectModCallbackData& Data, FEffectProperties& Props)
