@@ -107,6 +107,23 @@ void UAuraAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, 
 	// *** 这里限制的是current value 
 }
 
+void UAuraAttributeSet::PostAttributeChange(const FGameplayAttribute& Attribute, float OldValue, float NewValue)
+{
+	Super::PostAttributeChange(Attribute, OldValue, NewValue);
+	
+	if (Attribute == GetMaxHealthAttribute() && bTopOffHealth)
+	{
+		SetHealth(GetMaxHealth());
+		bTopOffHealth = false;
+	}
+	
+	if (Attribute == GetMaxManaAttribute() && bTopOffMana)
+	{
+		SetMana(GetMaxMana());
+		bTopOffMana = false;
+	}
+}
+
 void UAuraAttributeSet::PostGameplayEffectExecute(const struct FGameplayEffectModCallbackData& Data)
 {
 	Super::PostGameplayEffectExecute(Data);
@@ -180,17 +197,42 @@ void UAuraAttributeSet::PostGameplayEffectExecute(const struct FGameplayEffectMo
 			
 			if (NumLevelUps > 0)
 			{
-				const int32 AttributePointsReward = IPlayerInterface::Execute_GetAttributePointsReward(Props.SourceCharacter, CurentLevel);
-				const int32 SpellPointsReward = IPlayerInterface::Execute_GetSpellPointsReward(Props.SourceCharacter, CurentLevel);
-				// TODO: 这里可以考虑把奖励点数的计算逻辑放到 PlayerState 里，避免每次都查表。
-				// TODO: 为什么是 CurrentLevel
+				int32 AttributePointsReward = 0;
+				int32 SpellPointsReward = 0;
+				// 奖励按“跨过的等级门槛”累计：1->2 取 LevelUpInformation[1]，2->3 取 [2]。
+				for (int32 Level = CurentLevel; Level < NewLevel; ++Level)
+				{
+					AttributePointsReward += IPlayerInterface::Execute_GetAttributePointsReward(Props.SourceCharacter, Level);
+					SpellPointsReward += IPlayerInterface::Execute_GetSpellPointsReward(Props.SourceCharacter, Level);
+				}
 				
 				IPlayerInterface::Execute_AddToPlayerLevel(Props.SourceCharacter, NumLevelUps);
 				IPlayerInterface::Execute_AddToAttributePoints(Props.SourceCharacter, AttributePointsReward);
 				IPlayerInterface::Execute_AddToSpellPoints(Props.SourceCharacter, SpellPointsReward);
 				
-				SetHealth(GetMaxHealth());	
-				SetMana(GetMaxMana());
+				bTopOffHealth = true;
+				bTopOffMana = true;
+				
+				// Level 存在 PlayerState，不是 captured Attribute；升级后广播外部依赖，让 MMC 重新读取 Level。
+				if (ICombatInterface* CombatInterface = Cast<ICombatInterface>(Props.SourceCharacter))
+				{
+					if (FOnExternalGameplayModifierDependencyChange* ExternalDelegate = CombatInterface->GetExternalGameplayModifierDependencyMulticast())
+					{
+						ExternalDelegate->Broadcast();
+					}
+				}
+
+				// 如果 MaxHealth/MaxMana 没有变化，PostAttributeChange 不会补满；这里至少回满到当前上限。
+				if (bTopOffHealth)
+				{
+					SetHealth(GetMaxHealth());
+					bTopOffHealth = false;
+				}
+				if (bTopOffMana)
+				{
+					SetMana(GetMaxMana());
+					bTopOffMana = false;
+				}
 				
 				IPlayerInterface::Execute_LevelUp(Props.SourceCharacter);
 			}

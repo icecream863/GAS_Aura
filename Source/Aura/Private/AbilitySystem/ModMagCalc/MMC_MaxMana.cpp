@@ -35,3 +35,14 @@ float UMMC_MaxMana::CalculateBaseMagnitude_Implementation(const FGameplayEffectS
 	
 	return 50.f + 2.5f * Intelligence + 15.f * PlayerLevel;// 计算公式
 }
+
+FOnExternalGameplayModifierDependencyChange* UMMC_MaxMana::GetExternalModifierDependencyMulticast(
+	const FGameplayEffectSpec& Spec, UWorld* World) const
+{
+	// PlayerLevel 不在 AttributeSet 里，GAS 不会自动感知它变化；通过外部委托手动触发重算。
+	if (ICombatInterface* CombatInterface = Cast<ICombatInterface>(Spec.GetContext().GetSourceObject()))
+	{
+		return CombatInterface->GetExternalGameplayModifierDependencyMulticast();
+	}
+	return Super::GetExternalModifierDependencyMulticast(Spec, World);
+}

@@ -47,6 +47,7 @@ public:
 	virtual int32 GetMinionCount_Implementation() override;
 	virtual void IncrementMinionCount_Implementation(int32 Amount) override;
 	virtual ECharacterClass GetCharacterClass_Implementation() override;
+	virtual FOnExternalGameplayModifierDependencyChange* GetExternalGameplayModifierDependencyMulticast() override;
 	/** End CombatInterface */
 	
 	
@@ -148,6 +149,9 @@ protected:
 	virtual void InitialDefaultAttributes() const;
 	
 	void AddCharacterAbilities() const;
+
+	// 广播后，注册到该委托的 MMC 会让对应 Active GameplayEffect 重新计算 Modifier Magnitude。
+	FOnExternalGameplayModifierDependencyChange ExternalGameplayModifierDependencyMulticast;
 	
 private:
 	UPROPERTY(EditAnywhere, Category = "Abilities")

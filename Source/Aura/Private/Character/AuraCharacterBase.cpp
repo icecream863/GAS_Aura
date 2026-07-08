@@ -148,6 +148,12 @@ ECharacterClass AAuraCharacterBase::GetCharacterClass_Implementation()
 	return CharacterClass;
 }
 
+FOnExternalGameplayModifierDependencyChange* AAuraCharacterBase::GetExternalGameplayModifierDependencyMulticast()
+{
+	// 返回角色级外部依赖委托，供 MaxHealth/MaxMana 这类 MMC 注册刷新回调。
+	return &ExternalGameplayModifierDependencyMulticast;
+}
+
 UAnimMontage* AAuraCharacterBase::GetHitReactMontage_Implementation()
 {
 	return HitReactMontage;

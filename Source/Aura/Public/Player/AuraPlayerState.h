@@ -32,15 +32,22 @@ public:
 	
 	FOnPlayerStateChanged OnXPChangedDelegate;
 	FOnPlayerStateChanged OnLevelChangedDelegate;
+	FOnPlayerStateChanged OnAttributePointsChangedDelegate;
+	FOnPlayerStateChanged OnSpellPointsChangedDelegate;
 	
 	FORCEINLINE int32 GetPlayerLevel() const { return Level; }
 	FORCEINLINE int32 GetPlayerXP() const { return XP; }
+	FORCEINLINE int32 GetAttributePoints() const { return AttributePoints; }
+	FORCEINLINE int32 GetSpellPoints() const { return SpellPoints; }
+	
 	
 	void SetXP(const int32 InXP);
 	void SetLevel(const int32 InLevel);
 	
 	void AddToXP(const int32 InXP);
 	void AddToLevel(const int32 InLevel);
+	void AddToAttributePoints(const int32 InAttributePoints);
+	void AddToSpellPoints(const int32 InSpellPoints);
 	
 	
 	UPROPERTY(EditDefaultsOnly)
@@ -60,11 +67,23 @@ private:
 	UPROPERTY(VisibleAnywhere, ReplicatedUsing = OnRep_XP)
 	int32 XP = 1; //这个才是真正的 XP，记录总经验值， incomingXP 是每次获得的经验值
 	
+	UPROPERTY(VisibleAnywhere, ReplicatedUsing = OnRep_AttributePoints)
+	int32 AttributePoints = 0;
+	
+	UPROPERTY(VisibleAnywhere, ReplicatedUsing = OnRep_SpellPoints)
+	int32 SpellPoints = 1;
+	
 	UFUNCTION()
 	void OnRep_Level(const int32 OldLevel);
 	
 	UFUNCTION()
 	void OnRep_XP(const int32 OldXP);
+	
+	UFUNCTION()
+	void OnRep_AttributePoints(const int32 OldAttributePoints);
+	
+	UFUNCTION()
+	void OnRep_SpellPoints(const int32 OldSpellPoints);
 };
 
 

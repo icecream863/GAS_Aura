@@ -32,11 +32,17 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "GAS | Attributes")//~ BlueprintAssignable 允许在蓝图里绑定这个事件
 	FOnAttributeInfoSignature AttributeInfoDelegate;//~ 当属性信息发生变化时广播，界面可以绑定这个事件来更新显示
 	 
+	UPROPERTY(BlueprintAssignable, Category = "GAS | Attributes")
+	FOnPlayerStatChangedSignature AttributePointsChangedDelegate;
+	
+	UFUNCTION(BlueprintCallable)
+	void UpgradeAttribute(const FGameplayTag& AttributeTag);
 	
 protected:
 	UPROPERTY(EditDefaultsOnly)
 	TObjectPtr<UAttributeInfo> AttributeInfoDataAsset;//~ 存储属性信息的 DataAsset，包含属性标签、名称、描述等信息
 	
 private:
+	
 	void BroadcastAttributeInfo(const FGameplayTag& AttributeTag, const FGameplayAttribute& Attribute) const;
 };

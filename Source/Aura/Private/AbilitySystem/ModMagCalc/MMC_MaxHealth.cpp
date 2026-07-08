@@ -39,3 +39,14 @@ float UMMC_MaxHealth::CalculateBaseMagnitude_Implementation(const FGameplayEffec
 	return 80.f + 2.5f * Vigor + 10.f * PlayerLevel;//~ 这个公式是我随便写的，实际游戏里可以根据需要调整
 	//这就是自定义计算公式的地方，我们可以根据Vigor属性和玩家等级来计算最大生命值的基数。
 }
+
+FOnExternalGameplayModifierDependencyChange* UMMC_MaxHealth::GetExternalModifierDependencyMulticast(
+	const FGameplayEffectSpec& Spec, UWorld* World) const
+{
+	// PlayerLevel 不在 AttributeSet 里，GAS 不会自动感知它变化；通过外部委托手动触发重算。
+	if (ICombatInterface* CombatInterface = Cast<ICombatInterface>(Spec.GetContext().GetSourceObject()))
+	{
+		return CombatInterface->GetExternalGameplayModifierDependencyMulticast();
+	}
+	return Super::GetExternalModifierDependencyMulticast(Spec, World);
+}

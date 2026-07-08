@@ -36,7 +36,7 @@ struct FOnAttributeChangeData;
 // Delegate 类型命名习惯通常以 Signature 结尾
 // 这里定义了一个动态多播委托，参数是一个 float 类型的新值。当属性变化时，这个委托会被广播，界面可以绑定这个委托来更新显示。
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAttributeChangedSignature, float, NewValue);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlayerStatChangedSignature, int32, NewValue);
+
 
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FMessageUIWidgetRowSignature, FUIWidgetRow, Row);

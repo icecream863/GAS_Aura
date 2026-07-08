@@ -89,6 +89,8 @@ public:
 	// 属性即将被修改（常用于 Clamp，例如 Health 不能超过 MaxHealth）。
 	virtual void PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue) override;
 	
+	virtual void PostAttributeChange(const FGameplayAttribute& Attribute, float OldValue, float NewValue) override;
+	
 	// GameplayEffect 应用并结算后回调（常用于处理伤害、回血、触发事件等）。
 	virtual void PostGameplayEffectExecute(const struct FGameplayEffectModCallbackData& Data) override;
 	/** ReplicatedUsing：客户端收到服务器同步该属性时，触发对应 OnRep_*。
@@ -269,6 +271,9 @@ public:
 	void OnRep_PhysicalResistance(const FGameplayAttributeData& OldPhysicalResistance) const;
 	
 private:
+	
+	bool bTopOffHealth = false;
+	bool bTopOffMana = false;
 	
 	// 从 Data 里解析 Source/Target 相关对象并填充到 Props（内部会做 Cast/判空）。
 	void SetEffectProperties(const struct FGameplayEffectModCallbackData& Data, FEffectProperties& Props);
