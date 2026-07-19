@@ -15,7 +15,7 @@ UCLASS()
 class AURA_API UAuraProjectileSpell : public UAuraDamageGameplayAbility
 {
 	GENERATED_BODY()
-	
+
 	protected:
 	///	Override ActivateAbility to spawn projectile and do other fun stuff
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
@@ -25,6 +25,8 @@ class AURA_API UAuraProjectileSpell : public UAuraDamageGameplayAbility
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TSubclassOf<AAuraProjectile> ProjectileClass;
-	
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "FireBolt")
+	int32 NumProjectiles = 5;
 
 };

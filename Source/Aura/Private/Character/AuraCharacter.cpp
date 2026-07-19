@@ -117,7 +117,13 @@ void AAuraCharacter::AddToPlayerLevel_Implementation(int32 InPlayerLevel)
 {
 	AAuraPlayerState* AuraPlayerState = GetPlayerState<AAuraPlayerState>();
 	check(AuraPlayerState);
-	AuraPlayerState->AddToLevel(InPlayerLevel);
+	AuraPlayerState->AddToLevel(InPlayerLevel); // 广播等级
+	
+	if (UAuraAbilitySystemComponent* AuraASC = Cast<UAuraAbilitySystemComponent>(GetAbilitySystemComponent()) )
+	{
+		AuraASC->UpdateAbilityStatuses(AuraPlayerState->GetPlayerLevel()); // 更新技能状态(广播)
+	}
+	
 }
 
 void AAuraCharacter::AddToAttributePoints_Implementation(int32 InAttributePoints)

@@ -6,15 +6,16 @@
 #include "UI/Widget/AuraUserWidget.h" 
 #include "UI/WidgetController/AttributeMenuWidgetController.h"
 #include "UI/WidgetController/OverlayWidgetController.h"
+#include "UI/WidgetController/SpellMenuWidgetController.h"
 
 
-UOverlayWidgetController* AAuraHUD::GetOverlayWidgetController(const FWidgetControllerParams& WCParams)
+UOverlayWidgetController* AAuraHUD::GetOverlayWidgetController(const FWidgetControllerParams& WcParams)
 {
 	if (OverlayWidgetController == nullptr)
 	{
 		//~ 这里的创建方式是 NewObject，因为 WidgetController 是一个 UObject，而不是 Actor 或 Component；如果是 Actor 或 Component，应该用 SpawnActor 或 CreateDefaultSubobject。
 		OverlayWidgetController = NewObject<UOverlayWidgetController>(this, OverlayWidgetControllerClass);
-		OverlayWidgetController->SetWidgetControllerParams(WCParams);
+		OverlayWidgetController->SetWidgetControllerParams(WcParams);
 		
 		OverlayWidgetController->BindCallbacksToDependencies();
 		return OverlayWidgetController;
@@ -24,6 +25,22 @@ UOverlayWidgetController* AAuraHUD::GetOverlayWidgetController(const FWidgetCont
 		return OverlayWidgetController;
 	}
 	
+}
+
+USpellMenuWidgetController* AAuraHUD::GetSpellMenuWidgetController(const FWidgetControllerParams& WCParams)
+{
+	if (SpellMenuWidgetController == nullptr)
+	{
+		SpellMenuWidgetController = NewObject<USpellMenuWidgetController>(this, SpellMenuWidgetControllerClass);
+		SpellMenuWidgetController->SetWidgetControllerParams(WCParams);
+		
+		SpellMenuWidgetController->BindCallbacksToDependencies();
+		return SpellMenuWidgetController;
+	}
+	else
+	{
+		return SpellMenuWidgetController;
+	}
 }
 
 

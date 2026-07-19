@@ -6,6 +6,7 @@
 #include "GameFramework/HUD.h"
 #include "AuraHUD.generated.h"
 
+class USpellMenuWidgetController;
 class UAttributeSet;
 class UAbilitySystemComponent;
 struct FWidgetControllerParams;
@@ -22,15 +23,15 @@ class AURA_API AAuraHUD : public AHUD
 	
 public:
 	
-	UOverlayWidgetController* GetOverlayWidgetController(const FWidgetControllerParams& WCParams);
+	UOverlayWidgetController* GetOverlayWidgetController(const FWidgetControllerParams& WcParams);
+	
+	USpellMenuWidgetController* GetSpellMenuWidgetController(const FWidgetControllerParams& WCParams);
 	
 	//这个是GetAttributeMenuWidgetController的一部分，真正函数在 AuraAbilitySystemLibrary 里， 这里是实现细节， 主要是为了让 WidgetController 能拿到 ASC/AS 等依赖
 	UAttributeMenuWidgetController* GetAttributeMenuWidgetController(const FWidgetControllerParams& WCParams);
 	
 	void InitOverlay(APlayerState* PS, APlayerController* PC, UAbilitySystemComponent* ASC, UAttributeSet* AS);
-	
-protected:
-	
+
 	
 private:
 	
@@ -52,5 +53,9 @@ private:
 	UPROPERTY(EditAnywhere)
 	TSubclassOf<UAttributeMenuWidgetController> AttributeMenuWidgetControllerClass;
 	
+	UPROPERTY()
+	TObjectPtr<USpellMenuWidgetController> SpellMenuWidgetController;
 	
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<USpellMenuWidgetController> SpellMenuWidgetControllerClass;
 };

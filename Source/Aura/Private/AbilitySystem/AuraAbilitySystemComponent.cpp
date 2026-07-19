@@ -7,6 +7,7 @@
 #include "AuraGameplayTags.h"
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 #include "AbilitySystem/Abilities/AuraGameplayAbility.h"
+#include "AbilitySystem/Data/AbilityInfo.h"
 #include "Aura/AuraLogChannels.h"
 #include "Interaction/PlayerInterface.h"
 
@@ -28,24 +29,25 @@ void UAuraAbilitySystemComponent::ClientEffectApplied_Implementation(UAbilitySys
 
 void UAuraAbilitySystemComponent::OnRep_ActivateAbilities()
 {
+	/* 当可激活能力列表（Activatable/Replicated ActivatableAbilities）从服务器复制到客户端时会被调用。重写它可以在客户端处理“被授予能力”或能力列表变化的初始化工作。*/
 	Super::OnRep_ActivateAbilities();
-	
+
 	if (!bStartupAbilitiesGiven)
 	{
 		bStartupAbilitiesGiven = true;
-		AbilityGivenDelegate.Broadcast(this);
-	}//只需要在第一次 添加技能时广播， 因为广播的是 ASC， 
+		AbilityGivenDelegate.Broadcast();
+	}//只需要在第一次 添加技能时广播， 因为广播的是 ASC，
 }
 
 
 void UAuraAbilitySystemComponent::AbilityInputTagHeld(const FGameplayTag& InputTag)
 {
 	if (!InputTag.IsValid()) return;
-	
+
 	for (FGameplayAbilitySpec& AbilitySpec : GetActivatableAbilities())
 	{
 		if (AbilitySpec.DynamicAbilityTags.HasTagExact(InputTag))
-		{	
+		{
 			// 通知 Spec 键位被按下
 			AbilitySpecInputPressed(AbilitySpec);
 			// 如果技能还没激活，尝试激活它
@@ -59,7 +61,7 @@ void UAuraAbilitySystemComponent::AbilityInputTagHeld(const FGameplayTag& InputT
 
 void UAuraAbilitySystemComponent::AbilityInputTagReleased(const FGameplayTag& InputTag)
 {
-	
+
 	if (!InputTag.IsValid()) return;
 	for (FGameplayAbilitySpec& AbilitySpec : GetActivatableAbilities())
 	{
@@ -67,38 +69,39 @@ void UAuraAbilitySystemComponent::AbilityInputTagReleased(const FGameplayTag& In
 		{
 				// 无论技能是否正在运行，都应该通知“松开”事件
 				AbilitySpecInputReleased(AbilitySpec);
-			
+
 		}
 	}
 }
 
 void UAuraAbilitySystemComponent::AddCharacterAbility(const TArray<TSubclassOf<UGameplayAbility>>& StartupAbilities)
 {
-	
+
 	for (const TSubclassOf<UGameplayAbility> StartupAbility : StartupAbilities)
 	{
 		FGameplayAbilitySpec AbilitySpec = FGameplayAbilitySpec(StartupAbility, 1);
-		
+
 		if (const UAuraGameplayAbility* AuraGameplayAbility = Cast<UAuraGameplayAbility>(AbilitySpec.Ability))
 		{
 			AbilitySpec.DynamicAbilityTags.AddTag(AuraGameplayAbility->StartupInputTag);
+			AbilitySpec.DynamicAbilityTags.AddTag(FAuraGameplayTags::Get().Abilities_Status_Equipped);// 学习 就是 装备了
 			GiveAbility(AbilitySpec);
 		}
 	}
-	
+
 	bStartupAbilitiesGiven = true;
-	AbilityGivenDelegate.Broadcast(this);//只发生在服务端
+	AbilityGivenDelegate.Broadcast();//只发生在服务端
 }
 
 void UAuraAbilitySystemComponent::AddPassiveCharacterAbility(const TArray<TSubclassOf<UGameplayAbility>>& StartupPassiveAbilities)
 {
-	
+
 	for (const TSubclassOf<UGameplayAbility> StartupAbility : StartupPassiveAbilities)
 	{
 		FGameplayAbilitySpec AbilitySpec = FGameplayAbilitySpec(StartupAbility, 1);
 		GiveAbilityAndActivateOnce(AbilitySpec);
 	}
-	
+
 }
 
 void UAuraAbilitySystemComponent::UpgradeAttribute(const FGameplayTag& AttributeTag)
@@ -121,14 +124,14 @@ void UAuraAbilitySystemComponent::ServerUpgradeAttribute_Implementation(const FG
 	FGameplayEventData Payload;
 	Payload.EventTag = AttributeTag;
 	Payload.EventMagnitude = 1.0f;
-	
+
 	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(GetAvatarActor(), AttributeTag, Payload);
-	
-	if (GetAvatarActor()->Implements<UPlayerInterface>())	
+
+	if (GetAvatarActor()->Implements<UPlayerInterface>())
 	{
 		IPlayerInterface::Execute_AddToAttributePoints(GetAvatarActor(), -1);
 	}
-	
+
 }
 
 
@@ -139,7 +142,7 @@ void UAuraAbilitySystemComponent::ForEachAbility(const FForEachAbility& Delegate
 	*  避免遍历过程中容器变化导致的崩溃或不一致；离开作用域自动解锁（RAII）
 	*/
 	FScopedAbilityListLock ActiveScopeLock(*this);
-	
+
 	for (FGameplayAbilitySpec& AbilitySpec : GetActivatableAbilities())
 	{
 		if (!Delegate.ExecuteIfBound(AbilitySpec)) //这里在执行 委托
@@ -176,7 +179,224 @@ FGameplayTag UAuraAbilitySystemComponent::GetInputTagFromSpec(const FGameplayAbi
 	return FGameplayTag();
 }
 
+FGameplayTag UAuraAbilitySystemComponent::GetStatusFromSpec(const FGameplayAbilitySpec& AbilitySpec)
+{
+	for (const FGameplayTag& Tag : AbilitySpec.DynamicAbilityTags)
+	{
+		if (Tag.MatchesTag(FGameplayTag::RequestGameplayTag(FName("Abilities.Status"))))
+		{
+			return Tag;
+		}
+	}
+	return FGameplayTag();
+}
 
+FGameplayAbilitySpec* UAuraAbilitySystemComponent::GetAbilitySpecFromTag(const FGameplayTag& Tag)
+{
+	FScopedAbilityListLock ActiveScopeLock(*this);
+	for (FGameplayAbilitySpec& AbilitySpec : GetActivatableAbilities())
+	{
+		if (AbilitySpec.Ability && AbilitySpec.Ability->AbilityTags.HasTagExact(Tag))
+		{
+			return &AbilitySpec;
+		}
+	}
+	return nullptr;
+}
+
+FGameplayTag UAuraAbilitySystemComponent::GetStatusFromAbilityTag(const FGameplayTag& AbilityTag)
+{
+	if (const FGameplayAbilitySpec* AbilitySpec = GetAbilitySpecFromTag(AbilityTag))
+	{
+		return GetStatusFromSpec(*AbilitySpec);
+	}
+	return FGameplayTag();
+}
+
+FGameplayTag UAuraAbilitySystemComponent::GetInputTagFromAbilityTag(const FGameplayTag& AbilityTag)
+{
+	if (const FGameplayAbilitySpec* AbilitySpec = GetAbilitySpecFromTag(AbilityTag))
+	{
+		return GetInputTagFromSpec(*AbilitySpec);
+	}
+	return FGameplayTag();
+}
+
+bool UAuraAbilitySystemComponent::GetDescriptionByAbilityTag(const FGameplayTag& AbilityTag, FString& OutDescription,
+	FString& OutNextLevelDescription)
+{
+	const FAuraGameplayTags& GameplayTags = FAuraGameplayTags::Get();
+	if (!AbilityTag.IsValid() || AbilityTag.MatchesTagExact(GameplayTags.Abilities_None))
+	{
+		OutDescription = FString();
+		OutNextLevelDescription = FString();
+		return false;
+	}
+
+	if (FGameplayAbilitySpec* AbilitySpec = GetAbilitySpecFromTag(AbilityTag))
+	{
+		if (UAuraGameplayAbility* AuraGameplayAbility = Cast<UAuraGameplayAbility>(AbilitySpec->Ability))
+		{
+			OutDescription = AuraGameplayAbility->GetDescription(AbilitySpec->Level);
+			OutNextLevelDescription = AuraGameplayAbility->GetNextLevelDescription(AbilitySpec->Level + 1);
+			return true;
+		}
+
+
+	}
+
+	// 如果技能未解锁，返回锁定描述，locked状态返回 locked 描述
+	UAbilityInfo* AbilityInfo = UAuraAbilitySystemLibrary::GetAbilityInfo(GetAvatarActor());
+	if (!AbilityInfo)
+	{
+		OutDescription = FString();
+		OutNextLevelDescription = FString();
+		return false;
+	}
+	OutDescription = UAuraGameplayAbility::GetLockedDescription(AbilityInfo->FindAbilityInfoForTag(AbilityTag).LevelRequirement);
+	OutNextLevelDescription = FString();
+	return false;
+
+}
+
+
+// 在角色升级时调用
+void UAuraAbilitySystemComponent::UpdateAbilityStatuses(int32 Level)
+{
+	UAbilityInfo* AbilityInfo = UAuraAbilitySystemLibrary::GetAbilityInfo(GetAvatarActor());
+
+	for (const FAuraAbilityInfo& Info : AbilityInfo->AbilityInformation)
+	{
+		if (Level < Info.LevelRequirement )	 continue;
+		if (!Info.AbilityTag.IsValid()) continue;
+		if (GetAbilitySpecFromTag(Info.AbilityTag) == nullptr)
+		{
+			FGameplayAbilitySpec AbilitySpec = FGameplayAbilitySpec(Info.Ability, 1);
+			AbilitySpec.DynamicAbilityTags.AddTag(FAuraGameplayTags::Get().Abilities_Status_Eligible);
+			GiveAbility(AbilitySpec);
+			ClientUpdateAbilityStatus(Info.AbilityTag, FAuraGameplayTags::Get().Abilities_Status_Eligible, 1);//填 1是因为才解锁一个技能
+			// 服务端将数据 广播给客户端
+			MarkAbilitySpecDirty(AbilitySpec);// 立即刷新状态，避免客户端延迟显示
+		}
+
+	}
+
+
+}
+
+// 消耗 技能点
+void UAuraAbilitySystemComponent::ServerSpendSpellPoint_Implementation(const FGameplayTag& AbilityTag)
+{
+	if (FGameplayAbilitySpec* AbilitySpec = GetAbilitySpecFromTag(AbilityTag))
+	{
+		if (GetAvatarActor()->Implements<UPlayerInterface>() && IPlayerInterface::Execute_GetSpellPoints(GetAvatarActor()) > 0)
+		{
+			IPlayerInterface::Execute_AddToSpellPoints(GetAvatarActor(), -1);
+			// 这里可以添加逻辑来处理技能升级或其他相关操作
+		}
+
+		const FAuraGameplayTags & GameplayTags = FAuraGameplayTags::Get();
+		FGameplayTag CurrentStatus = GetStatusFromSpec(*AbilitySpec);
+		if (CurrentStatus == GameplayTags.Abilities_Status_Eligible)
+		{
+			CurrentStatus = GameplayTags.Abilities_Status_Unlocked;
+			AbilitySpec->DynamicAbilityTags.RemoveTag(GameplayTags.Abilities_Status_Eligible);
+			AbilitySpec->DynamicAbilityTags.AddTag(GameplayTags.Abilities_Status_Unlocked);
+		}
+		else if (CurrentStatus == GameplayTags.Abilities_Status_Equipped || CurrentStatus == GameplayTags.Abilities_Status_Unlocked)
+		{
+			AbilitySpec->Level += 1;
+		}
+
+		ClientUpdateAbilityStatus(AbilityTag, CurrentStatus, AbilitySpec->Level);// 更新技能状态
+		MarkAbilitySpecDirty(*AbilitySpec); // 立即刷新状态，避免客户端延迟显示
+	}
+
+}
+void UAuraAbilitySystemComponent::ClientUpdateAbilityStatus_Implementation(const FGameplayTag& AbilityTag,
+                                                                           const FGameplayTag& StatusTag, int32 AbilityLevel)
+{
+	AbilityStatusChanged.Broadcast(AbilityTag, StatusTag, AbilityLevel);
+}
+
+void UAuraAbilitySystemComponent::ServerEquipAbility_Implementation(const FGameplayTag& AbilityTag, const FGameplayTag& Slot)
+{
+	if (FGameplayAbilitySpec* AbilitySpec = GetAbilitySpecFromTag(AbilityTag))
+	{
+		const FAuraGameplayTags& GameplayTags = FAuraGameplayTags::Get();
+		const FGameplayTag PreviousSlot = GetInputTagFromSpec(*AbilitySpec);
+		FGameplayTag Status = GetStatusFromSpec(*AbilitySpec);
+		const bool bStatusValid =
+			Status.MatchesTagExact(GameplayTags.Abilities_Status_Equipped) ||
+			Status.MatchesTagExact(GameplayTags.Abilities_Status_Unlocked);
+
+		if (bStatusValid)
+		{
+			// 一个槽位只能放一个技能；先清目标槽位，再清当前技能原来的槽位。
+			ClearAbilitiesOfSlot(Slot); 
+			ClearSlot(AbilitySpec);
+			AbilitySpec->DynamicAbilityTags.AddTag(Slot);
+
+			if (Status.MatchesTagExact(GameplayTags.Abilities_Status_Unlocked))
+			{
+				// 第一次装备时，把技能从 Unlocked 推进到 Equipped 状态。
+				AbilitySpec->DynamicAbilityTags.RemoveTag(GameplayTags.Abilities_Status_Unlocked);
+				AbilitySpec->DynamicAbilityTags.AddTag(GameplayTags.Abilities_Status_Equipped);
+				Status = GameplayTags.Abilities_Status_Equipped;
+			}
+
+			MarkAbilitySpecDirty(*AbilitySpec);
+			ClientEquipAbility(AbilityTag, GameplayTags.Abilities_Status_Equipped, Slot, PreviousSlot);
+		}
+	}
+}
+
+void UAuraAbilitySystemComponent::ClientEquipAbility_Implementation(const FGameplayTag& AbilityTag, const FGameplayTag& Status,
+	const FGameplayTag& Slot, const FGameplayTag& PreviousSlot)
+{
+	AbilityEquipped.Broadcast(AbilityTag, Status, Slot, PreviousSlot);
+}
+
+bool UAuraAbilitySystemComponent::AbilityHasSlot(FGameplayAbilitySpec* Spec, const FGameplayTag& Slot)
+{
+	if (!Spec)
+	{
+		return false;
+	}
+
+	for (const FGameplayTag& Tag : Spec->DynamicAbilityTags)
+	{
+		if (Tag.MatchesTagExact(Slot))
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+void UAuraAbilitySystemComponent::ClearSlot(FGameplayAbilitySpec* Spec)
+{
+	if (!Spec)
+	{
+		return;
+	}
+
+	const FGameplayTag Slot = GetInputTagFromSpec(*Spec);
+	Spec->DynamicAbilityTags.RemoveTag(Slot);
+	MarkAbilitySpecDirty(*Spec);
+}
+
+void UAuraAbilitySystemComponent::ClearAbilitiesOfSlot(const FGameplayTag& Slot)
+{
+	FScopedAbilityListLock ActiveScopeLock(*this);
+	for (FGameplayAbilitySpec& Spec : GetActivatableAbilities())
+	{
+		if (AbilityHasSlot(&Spec, Slot))
+		{
+			ClearSlot(&Spec);
+		}
+	}
+}
 
 
 

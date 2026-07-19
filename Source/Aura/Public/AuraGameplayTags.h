@@ -45,6 +45,8 @@ public:
 	FGameplayTag InputTag_2;
 	FGameplayTag InputTag_3;
 	FGameplayTag InputTag_4;
+	FGameplayTag InputTag_Passive_1;
+	FGameplayTag InputTag_Passive_2;
 	
 	//~ Damage Tags
 	FGameplayTag Damage;
@@ -62,6 +64,20 @@ public:
 	FGameplayTag Damage_Resistance_Lightning;
 	FGameplayTag Damage_Resistance_Arcane;
 	FGameplayTag Damage_Resistance_Physical;
+
+	//~ Debuff Tags
+	TMap<FGameplayTag, FGameplayTag> DamageTypesToDebuffs;
+
+	FGameplayTag Debuff_Burn;
+	FGameplayTag Debuff_Stun;
+	FGameplayTag Debuff_Arcane;
+	FGameplayTag Debuff_Physical;
+
+	//~ Debuff Parameters
+	FGameplayTag Debuff_Chance;
+	FGameplayTag Debuff_Damage;
+	FGameplayTag Debuff_Duration;
+	FGameplayTag Debuff_Frequency;
 	
 	//~ Set By Caller Tags
 	FGameplayTag Effect_HitReact;
@@ -79,9 +95,23 @@ public:
 	FGameplayTag Montage_Attack_4;
 
 	//  技能触发标签
+	FGameplayTag Abilities_None;
 	FGameplayTag Abilities_Attack;
 	FGameplayTag Abilities_Summon;
+
 	FGameplayTag Abilities_Fire_FireBolt;
+	FGameplayTag Abilities_Lightning_Electrocute;
+
+	FGameplayTag Abilities_HitReact;
+
+	FGameplayTag Abilities_Status_Locked;
+	FGameplayTag Abilities_Status_Eligible;
+	FGameplayTag Abilities_Status_Unlocked;
+	FGameplayTag Abilities_Status_Equipped;
+
+	FGameplayTag Abilities_Type_Offensive;
+	FGameplayTag Abilities_Type_Passive;
+	FGameplayTag Abilities_Type_None;
 	
 	//~ 技能冷却标签
 	FGameplayTag Cooldown_Fire_FireBolt;

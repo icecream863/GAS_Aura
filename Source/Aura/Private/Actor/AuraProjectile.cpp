@@ -59,51 +59,57 @@ void AAuraProjectile::Destroyed()
 	//- 2.先接受重叠回调，触发命中逻辑（包括销毁），则 bHit 会被设置为 true，Destroyed 里就不会补播特效与音效，避免重复。
 	if (!bHit && !HasAuthority())
 	{
-		UGameplayStatics::PlaySoundAtLocation(this, ImpactSound, GetActorLocation());
-		UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, ImpactEffect, GetActorLocation());
-		if (LoopingSoundComponent) LoopingSoundComponent->Stop();
-		bHit = true;
+		OnHit();
 	}
 	
 	Super::Destroyed();
 }
 
+void AAuraProjectile::OnHit()
+{
+	UGameplayStatics::PlaySoundAtLocation(this, ImpactSound, GetActorLocation());
+	UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, ImpactEffect, GetActorLocation());
+	if (LoopingSoundComponent) LoopingSoundComponent->Stop();
+	bHit = true;
+}
+
 void AAuraProjectile::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
                                       UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	if ( !DamageEffectSpecHandle.Data.IsValid() || DamageEffectSpecHandle.Data.Get()->GetEffectContext().GetEffectCauser()== OtherActor)
+	AActor* SourceAvatarActor = DamageEffectParams.SourceAbilitySystemComponent
+		? DamageEffectParams.SourceAbilitySystemComponent->GetAvatarActor()
+		: nullptr;
+	if (!SourceAvatarActor || SourceAvatarActor == OtherActor)
 	{
-		return;//忽略自己（施法者/发射者）”**的重叠判定
+		return;// 忽略自己（施法者）的重叠判定
 	}
 	
-	if ( !UAuraAbilitySystemLibrary::IsNotFriend(DamageEffectSpecHandle.Data.Get()->GetEffectContext().GetEffectCauser(), OtherActor) )
+	if (!UAuraAbilitySystemLibrary::IsNotFriend(SourceAvatarActor, OtherActor))
 	{
-		return;//忽略友方（队友/自己）”**的重叠判定
+		return;// 忽略友方（队友/自己）的重叠判定
 	}
 	
-	if ( !bHit )
+	if (!bHit)
 	{
-		UGameplayStatics::PlaySoundAtLocation(this, ImpactSound, GetActorLocation());
-		UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, ImpactEffect, GetActorLocation());
-		if (LoopingSoundComponent) LoopingSoundComponent->Stop();
-		bHit = true;//记录已命中，避免 Destroyed() 里重复触发特效与音效。
+		OnHit();
 	}
 	
 	
 	if (HasAuthority())
 	{	
-		//应用伤害效果
 		if (UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(OtherActor))
 		{
-			TargetASC->ApplyGameplayEffectSpecToSelf(*DamageEffectSpecHandle.Data.Get());
+			// 目标只有在命中时才确定，因此现在才补上 Target ASC 再统一应用伤害。
+			DamageEffectParams.TargetAbilitySystemComponent = TargetASC;
+			UAuraAbilitySystemLibrary::ApplyDamageEffect(DamageEffectParams);
 		}
 		
 		Destroy();
 	}
 	else//客户端
 	{
-		bHit = true;
 		//这行 bHit = true; 记录客户端已发生命中，用于 Destroyed() 里判断是否需要补播特效与音效，避免与命中回调重复触发。
+		bHit = true;
 	}
 }
 

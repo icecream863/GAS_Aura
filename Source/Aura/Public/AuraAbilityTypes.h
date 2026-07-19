@@ -1,7 +1,56 @@
 ﻿#pragma once
 
+#include "GameplayTagContainer.h"
 #include "GameplayEffectTypes.h"
 #include "AuraAbilityTypes.generated.h"
+
+class UAbilitySystemComponent;
+class UGameplayEffect;
+
+USTRUCT(BlueprintType)
+// 把一次伤害所需的所有数据集中起来，避免每增加一个战斗参数就修改多个函数签名。
+struct FDamageEffectParams
+{
+	GENERATED_BODY()
+
+	FDamageEffectParams() = default;
+
+	// 用于创建 EffectContext；即使没有目标，也必须有一个有效的世界上下文。
+	UPROPERTY(BlueprintReadWrite)
+	TObjectPtr<UObject> WorldContextObject = nullptr;
+
+	UPROPERTY(BlueprintReadWrite)
+	TSubclassOf<UGameplayEffect> DamageGameplayEffectClass = nullptr;
+
+	// 伤害由谁发出、最终应用到谁，分别由源 ASC 和目标 ASC 表示。
+	UPROPERTY(BlueprintReadWrite)
+	TObjectPtr<UAbilitySystemComponent> SourceAbilitySystemComponent = nullptr;
+
+	UPROPERTY(BlueprintReadWrite)
+	TObjectPtr<UAbilitySystemComponent> TargetAbilitySystemComponent = nullptr;
+
+	// 这些值最终会写入 GameplayEffectSpec 的 SetByCaller。
+	UPROPERTY(BlueprintReadWrite)
+	float BaseDamage = 0.f;
+
+	UPROPERTY(BlueprintReadWrite)
+	float AbilityLevel = 1.f;
+
+	UPROPERTY(BlueprintReadWrite)
+	FGameplayTag DamageType;
+
+	UPROPERTY(BlueprintReadWrite)
+	float DebuffChance = 0.f;
+
+	UPROPERTY(BlueprintReadWrite)
+	float DebuffDamage = 0.f;
+
+	UPROPERTY(BlueprintReadWrite)
+	float DebuffDuration = 0.f;
+
+	UPROPERTY(BlueprintReadWrite)
+	float DebuffFrequency = 0.f;
+};
 
 /**
  * 自定义 GameplayEffectContext。

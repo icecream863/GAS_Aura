@@ -3,8 +3,10 @@
 
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 
+#include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponent.h"
 #include "AuraAbilityTypes.h"
+#include "AuraGameplayTags.h"
 #include "GameplayEffectTypes.h"
 #include "Game/AuraGameModeBase.h"
 #include "Interaction/CombatInterface.h"
@@ -14,20 +16,36 @@
 #include "UI/WidgetController/AuraWidgetController.h"
 
 
-UOverlayWidgetController* UAuraAbilitySystemLibrary::GetOverlayWidgetController(const UObject* WorldContextObject)
+bool UAuraAbilitySystemLibrary::MakeWidgetControllerParams(const UObject* WorldContextObject,
+	FWidgetControllerParams& OutWCParams, AAuraHUD*& OutAuraHUD)
 {
 	if (APlayerController* PC = UGameplayStatics::GetPlayerController(WorldContextObject, 0))
 	{
-		if (AAuraHUD* AuraHUD = Cast<AAuraHUD>(PC->GetHUD()))
+		OutAuraHUD = Cast<AAuraHUD>(PC->GetHUD());
+		
+		if (OutAuraHUD)
 		{
 			AAuraPlayerState* PS = PC->GetPlayerState<AAuraPlayerState>();	
 			UAttributeSet* AS = PS->GetAttributeSet();
 			UAbilitySystemComponent* ASC = PS->GetAbilitySystemComponent();
 
-			FWidgetControllerParams WidgetControllerParams = FWidgetControllerParams(PS, PC, ASC, AS);
+			OutWCParams = FWidgetControllerParams(PS, PC, ASC, AS);
 			
-			return AuraHUD->GetOverlayWidgetController(WidgetControllerParams);
+			return true;
 		}
+	}
+	
+	return false;
+}
+
+UOverlayWidgetController* UAuraAbilitySystemLibrary::GetOverlayWidgetController(const UObject* WorldContextObject)
+{
+	FWidgetControllerParams WidgetControllerParams;
+	AAuraHUD* AuraHUD = nullptr;
+	
+	if (MakeWidgetControllerParams(WorldContextObject, WidgetControllerParams, AuraHUD))
+	{
+		return AuraHUD->GetOverlayWidgetController(WidgetControllerParams);
 	}
 	
 	return nullptr;
@@ -36,18 +54,25 @@ UOverlayWidgetController* UAuraAbilitySystemLibrary::GetOverlayWidgetController(
 UAttributeMenuWidgetController* UAuraAbilitySystemLibrary::GetAttributeMenuWidgetController(
 	const UObject* WorldContextObject)
 {
-	if (APlayerController* PC = UGameplayStatics::GetPlayerController(WorldContextObject, 0))
+	FWidgetControllerParams WidgetControllerParams;
+	AAuraHUD* AuraHUD = nullptr;
+	
+	if (MakeWidgetControllerParams(WorldContextObject, WidgetControllerParams, AuraHUD))
 	{
-		if (AAuraHUD* AuraHUD = Cast<AAuraHUD>(PC->GetHUD()))
-		{
-			AAuraPlayerState* PS = PC->GetPlayerState<AAuraPlayerState>();	
-			UAttributeSet* AS = PS->GetAttributeSet();
-			UAbilitySystemComponent* ASC = PS->GetAbilitySystemComponent();
+		return AuraHUD->GetAttributeMenuWidgetController(WidgetControllerParams);
+	}
+	
+	return nullptr;
+}
 
-			FWidgetControllerParams WidgetControllerParams = FWidgetControllerParams(PS, PC, ASC, AS);
-			
-			return AuraHUD->GetAttributeMenuWidgetController(WidgetControllerParams);
-		}
+USpellMenuWidgetController* UAuraAbilitySystemLibrary::GetSpellMenuWidgetController(const UObject* WorldContextObject)
+{
+	FWidgetControllerParams WidgetControllerParams;
+	AAuraHUD* AuraHUD = nullptr;
+	
+	if (MakeWidgetControllerParams(WorldContextObject, WidgetControllerParams, AuraHUD))
+	{
+		return AuraHUD->GetSpellMenuWidgetController(WidgetControllerParams);
 	}
 	
 	return nullptr;
@@ -135,6 +160,14 @@ UCharacterClassInfo* UAuraAbilitySystemLibrary::GetCharacterClassInfo(const UObj
 	return AuraGameMode->CharacterClassInfo;
 }
 
+UAbilityInfo* UAuraAbilitySystemLibrary::GetAbilityInfo(const UObject* WorldContextObject)
+{
+	AAuraGameModeBase* AuraGameMode = Cast<AAuraGameModeBase>(UGameplayStatics::GetGameMode(WorldContextObject));
+	if (AuraGameMode == nullptr) return nullptr;//客户端没有 GameMode,在客户端执行就会返回 空指针
+	
+	return AuraGameMode->AbilityInfo; // 存在 GameMode 里，所有玩家共享一个 AbilityInfo 数据表
+}
+
 bool UAuraAbilitySystemLibrary::IsBlockedHit(const FGameplayEffectContextHandle& EffectContextHandle)
 {	
 	/**
@@ -186,6 +219,48 @@ void UAuraAbilitySystemLibrary::SetCriticalHit(FGameplayEffectContextHandle& Eff
 	{
 		AuraEffectContext->SetCriticalHit(bInIsCriticalHit);
 	}
+}
+
+FGameplayEffectContextHandle UAuraAbilitySystemLibrary::ApplyDamageEffect(
+	const FDamageEffectParams& DamageEffectParams)
+{
+	// 没有源/目标 ASC 就无法创建或应用伤害 GE；这属于调用方配置错误。
+	check(DamageEffectParams.SourceAbilitySystemComponent);
+	check(DamageEffectParams.TargetAbilitySystemComponent);
+	check(DamageEffectParams.DamageGameplayEffectClass);
+
+	FGameplayEffectContextHandle EffectContextHandle =
+		DamageEffectParams.SourceAbilitySystemComponent->MakeEffectContext();
+	AActor* SourceAvatarActor = DamageEffectParams.SourceAbilitySystemComponent->GetAvatarActor();
+	EffectContextHandle.AddSourceObject(SourceAvatarActor);
+
+	// Context 保存这次伤害的来源，后续格挡、暴击和浮动伤害文字都可以读取它。
+	const FGameplayEffectSpecHandle SpecHandle =
+		DamageEffectParams.SourceAbilitySystemComponent->MakeOutgoingSpec(
+			DamageEffectParams.DamageGameplayEffectClass,
+			DamageEffectParams.AbilityLevel,
+			EffectContextHandle);
+	check(SpecHandle.IsValid());
+
+	// Tag 是参数名，Magnitude 是本次技能计算出来的值；ExecCalc_Damage 会用相同 Tag 读取。
+	UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(
+		SpecHandle,
+		DamageEffectParams.DamageType,
+		DamageEffectParams.BaseDamage);
+
+	const FAuraGameplayTags& GameplayTags = FAuraGameplayTags::Get();
+	// Debuff 参数也随同一个 Spec 传递，后续 Debuff 逻辑可以按 Tag 读取它们。
+	UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(
+		SpecHandle, GameplayTags.Debuff_Chance, DamageEffectParams.DebuffChance);
+	UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(
+		SpecHandle, GameplayTags.Debuff_Damage, DamageEffectParams.DebuffDamage);
+	UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(
+		SpecHandle, GameplayTags.Debuff_Duration, DamageEffectParams.DebuffDuration);
+	UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(
+		SpecHandle, GameplayTags.Debuff_Frequency, DamageEffectParams.DebuffFrequency);
+
+	DamageEffectParams.TargetAbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+	return EffectContextHandle;
 }
 
 void UAuraAbilitySystemLibrary::GetLivePlayersWithinRadius(const UObject* WorldContextObject,
