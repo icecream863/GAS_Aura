@@ -191,6 +191,7 @@ void AAuraEnemy::InitAbilityActorInfo()
 	{
 		AuraASC->AbilityActorInfoSet();
 	}
+	OnASCRegistered.Broadcast(AbilitySystemComponent);
 	
 	if (HasAuthority()) //GameMode 只存在于服务器，所以这个函数在客户端执行时会返回 空指针，因此要在服务端执行。
 	{

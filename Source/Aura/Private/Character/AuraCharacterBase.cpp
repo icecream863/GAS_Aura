@@ -6,6 +6,7 @@
 #include "AbilitySystemComponent.h"
 #include "AuraGameplayTags.h"
 #include "AbilitySystem/AuraAbilitySystemComponent.h"
+#include "AbilitySystem/Debuff/DebuffNiagaraComponent.h"
 #include "Aura/Aura.h"
 #include "Components/CapsuleComponent.h"
 #include "Kismet/GameplayStatics.h"
@@ -15,6 +16,10 @@ AAuraCharacterBase::AAuraCharacterBase()
 {
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = false;
+
+	BurnDebuffComponent = CreateDefaultSubobject<UDebuffNiagaraComponent>(TEXT("BurnDebuffComponent"));
+	BurnDebuffComponent->SetupAttachment(GetRootComponent());
+	BurnDebuffComponent->DebuffTag = FAuraGameplayTags::Get().Debuff_Burn;
 
 	Weapon = CreateDefaultSubobject<USkeletalMeshComponent>(FName("Weapon") );
 	Weapon->SetupAttachment(GetMesh(), FName("WeaponHandSocket"));
@@ -70,7 +75,8 @@ void AAuraCharacterBase::MulticastHandleDeath_Implementation()
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
 	bDead = true;
-	
+	OnDeath.Broadcast(this);
+
 }
 
 
@@ -152,6 +158,16 @@ FOnExternalGameplayModifierDependencyChange* AAuraCharacterBase::GetExternalGame
 {
 	// 返回角色级外部依赖委托，供 MaxHealth/MaxMana 这类 MMC 注册刷新回调。
 	return &ExternalGameplayModifierDependencyMulticast;
+}
+
+FOnASCRegistered& AAuraCharacterBase::GetOnASCRegisteredDelegate()
+{
+	return OnASCRegistered;
+}
+
+FOnDeath& AAuraCharacterBase::GetOnDeathDelegate()
+{
+	return OnDeath;
 }
 
 UAnimMontage* AAuraCharacterBase::GetHitReactMontage_Implementation()

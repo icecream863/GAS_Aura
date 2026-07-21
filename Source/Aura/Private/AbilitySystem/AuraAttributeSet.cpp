@@ -4,6 +4,8 @@
 
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AuraGameplayTags.h"
+#include "GameplayEffect.h"
+#include "GameplayEffectComponents/TargetTagsGameplayEffectComponent.h"
 #include "GameplayEffectExtension.h"
 #include "AbilitySystem/AuraAbilitySystemLibrary.h"
 
@@ -12,6 +14,7 @@
 #include "Interaction/PlayerInterface.h"
 #include "Net/UnrealNetwork.h"
 #include "Player/AuraPlayerController.h"
+#include "UObject/Package.h"
 
 UAuraAttributeSet::UAuraAttributeSet()
 {
@@ -55,7 +58,6 @@ void UAuraAttributeSet::GetLifetimeReplicatedProps(TArray<class FLifetimePropert
 	DOREPLIFETIME_CONDITION_NOTIFY(UAuraAttributeSet, Health, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UAuraAttributeSet, Mana, COND_None, REPNOTIFY_Always);
 
-	
 	// Primary Attributes：同样走复制 + OnRep，用于客户端 UI/表现更新。
 	DOREPLIFETIME_CONDITION_NOTIFY(UAuraAttributeSet, Strength, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UAuraAttributeSet, Intelligence, COND_None, REPNOTIFY_Always);
@@ -131,6 +133,15 @@ void UAuraAttributeSet::PostGameplayEffectExecute(const struct FGameplayEffectMo
 	// GE 结算后：这里通常用来处理“伤害 -> 扣血”、“吸血”、“触发受击表现”等。
 	FEffectProperties Props;
 	SetEffectProperties(Data, Props);
+
+	// Periodic debuffs may tick after the fatal hit. Once the target is dead, no further
+	// attribute processing, hit react, floating text, XP, or chained debuff should run.
+	if (Props.TargetAvatarActor &&
+		Props.TargetAvatarActor->Implements<UCombatInterface>() &&
+		ICombatInterface::Execute_IsDead(Props.TargetAvatarActor))
+	{
+		return;
+	}
 	
 	// 
 	if (Data.EvaluatedData.Attribute == GetHealthAttribute())
@@ -152,7 +163,7 @@ void UAuraAttributeSet::PostGameplayEffectExecute(const struct FGameplayEffectMo
 	{
 		HandleIncomingXP(Props);
 	}
-	
+
 	 /* 这里限制 base value
 		duration和 infinite都会修改 current value, instant 和 period( + duration or  +infinite) 会修改 base value
 		gethealth = base value + duration/infinite modifier + instant/period modifier
@@ -262,7 +273,55 @@ void UAuraAttributeSet::HandleIncomingXP(const FEffectProperties& Props)
 
 void UAuraAttributeSet::Debuff(const FEffectProperties& Props)
 {
-	// 下一节将在这里根据 Context 中的 DamageType、Damage、Duration 和 Frequency 动态创建 GE。
+	if (!Props.SourceASC || !Props.TargetASC)
+	{
+		return;
+	}
+
+	const FAuraGameplayTags& GameplayTags = FAuraGameplayTags::Get();
+	const FGameplayTag DamageType = UAuraAbilitySystemLibrary::GetDamageType(Props.EffectContextHandle);
+	const FGameplayTag* DebuffTag = GameplayTags.DamageTypesToDebuffs.Find(DamageType);
+	if (!DamageType.IsValid() || !DebuffTag || !DebuffTag->IsValid())
+	{
+		return;
+	}
+
+	const float DebuffDamage = UAuraAbilitySystemLibrary::GetDebuffDamage(Props.EffectContextHandle);
+	const float DebuffDuration = UAuraAbilitySystemLibrary::GetDebuffDuration(Props.EffectContextHandle);
+	const float DebuffFrequency = UAuraAbilitySystemLibrary::GetDebuffFrequency(Props.EffectContextHandle);
+	if (DebuffDuration <= 0.f || DebuffFrequency <= 0.f)
+	{
+		return;
+	}
+
+	FGameplayEffectContextHandle EffectContext = Props.SourceASC->MakeEffectContext();
+	EffectContext.AddSourceObject(Props.SourceAvatarActor);
+	UAuraAbilitySystemLibrary::SetDamageType(EffectContext, DamageType);
+
+	const FString DebuffName = FString::Printf(TEXT("DynamicDebuff_%s"), *DamageType.ToString());
+	UGameplayEffect* Effect = NewObject<UGameplayEffect>(GetTransientPackage(), FName(*DebuffName));
+	Effect->DurationPolicy = EGameplayEffectDurationType::HasDuration;
+	Effect->Period = DebuffFrequency;
+	Effect->DurationMagnitude = FScalableFloat(DebuffDuration);
+	FInheritedTagContainer GrantedTags;
+	GrantedTags.AddTag(*DebuffTag);
+	Effect->FindOrAddComponent<UTargetTagsGameplayEffectComponent>().SetAndApplyTargetTagChanges(GrantedTags);
+	// UE 5.8 exposes SetStackingType only under WITH_EDITOR, so runtime-created effects
+	// must still assign the deprecated public property.
+	PRAGMA_DISABLE_DEPRECATION_WARNINGS
+	Effect->StackingType = EGameplayEffectStackingType::AggregateBySource;
+	PRAGMA_ENABLE_DEPRECATION_WARNINGS
+	Effect->StackLimitCount = 1;
+
+	FGameplayModifierInfo& ModifierInfo = Effect->Modifiers.AddDefaulted_GetRef();
+	ModifierInfo.ModifierMagnitude = FScalableFloat(DebuffDamage);
+	ModifierInfo.ModifierOp = EGameplayModOp::Additive;
+	ModifierInfo.Attribute = GetIncomingDamageAttribute();
+
+	// ApplyGameplayEffectSpecToSelf copies the spec into the target ASC, so a local spec
+	// is sufficient and avoids allocating an unmanaged FGameplayEffectSpec with new.
+	const FGameplayEffectSpec DebuffSpec(Effect, EffectContext, 1.f);
+	Props.TargetASC->ApplyGameplayEffectSpecToSelf(DebuffSpec);
 }
 
 

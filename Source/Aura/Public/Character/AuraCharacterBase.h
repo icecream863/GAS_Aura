@@ -14,6 +14,7 @@ class UGameplayAbility;
 class UAbilitySystemComponent;
 class UAttributeSet;
 class UGameplayEffect;
+class UDebuffNiagaraComponent;
 
 UCLASS(Abstract)// 不会作为实例
 class AURA_API AAuraCharacterBase : public ACharacter, public IAbilitySystemInterface, public ICombatInterface
@@ -48,6 +49,8 @@ public:
 	virtual void IncrementMinionCount_Implementation(int32 Amount) override;
 	virtual ECharacterClass GetCharacterClass_Implementation() override;
 	virtual FOnExternalGameplayModifierDependencyChange* GetExternalGameplayModifierDependencyMulticast() override;
+	virtual FOnASCRegistered& GetOnASCRegisteredDelegate() override;
+	virtual FOnDeath& GetOnDeathDelegate() override;
 	/** End CombatInterface */
 	
 	
@@ -132,6 +135,9 @@ protected:
 	TObjectPtr<UAttributeSet> AttributeSet;
 	
 	virtual void InitAbilityActorInfo();
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Debuff")
+	TObjectPtr<UDebuffNiagaraComponent> BurnDebuffComponent;
 	
 	UPROPERTY(BlueprintReadOnly, EditAnywhere, Category = "Attributes")
 	TSubclassOf<UGameplayEffect> DefaultPrimaryAttributes;
@@ -152,6 +158,10 @@ protected:
 
 	// 广播后，注册到该委托的 MMC 会让对应 Active GameplayEffect 重新计算 Modifier Magnitude。
 	FOnExternalGameplayModifierDependencyChange ExternalGameplayModifierDependencyMulticast;
+	FOnASCRegistered OnASCRegistered;
+
+	UPROPERTY(BlueprintAssignable, Category = "Combat")
+	FOnDeath OnDeath;
 	
 private:
 	UPROPERTY(EditAnywhere, Category = "Abilities")
