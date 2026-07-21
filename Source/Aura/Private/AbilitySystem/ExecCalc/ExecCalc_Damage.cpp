@@ -36,38 +36,6 @@ struct AuraDamageStatics
 	DECLARE_ATTRIBUTE_CAPTUREDEF(ArcaneResistance);
 	DECLARE_ATTRIBUTE_CAPTUREDEF(PhysicalResistance);
 	
-	/**
-	 * 将“抗性Tag -> CaptureDef”的映射延迟初始化。
-	 * 原因：UExecCalc_Damage 的 CDO/静态对象可能在 AssetManager 调用
-	 * FAuraGameplayTags::InitializeNativeGameplayTags() 之前就被构造，
-	 * 导致 FAuraGameplayTags::Get() 里的 Tag 还是无效值（None），从而 Map 为空/不匹配。
-	 */
-	mutable bool bTagsToCaptureDefsInitialized = false;
-	mutable TMap<FGameplayTag, FGameplayEffectAttributeCaptureDefinition> TagsToCaptureDefs;
-	// 这个 Map 用来存储 不同伤害类型对应的 抓取定义， 这样我们就能在计算时根据伤害类型动态地获取对应的抗性属性了。
-
-	void InitTagsToCaptureDefs() const
-	{
-		if (bTagsToCaptureDefsInitialized) return;
-
-		const FAuraGameplayTags& Tags = FAuraGameplayTags::Get();
-		// GameplayTags 还未初始化时，这些 Tag 会是 invalid；此时不要写入 Map。
-		if (!Tags.Damage_Resistance_Fire.IsValid())
-		{
-			return;
-		}
-
-		TagsToCaptureDefs.Reset();
-		// Key 必须是“抗性标签”，因为 Execute() 遍历的是 DamageTypesToResistances，
-		// Pair.Value（ResistanceTag）会拿来查这个 Map。
-		TagsToCaptureDefs.Add(Tags.Damage_Resistance_Fire, FireResistanceDef);
-		TagsToCaptureDefs.Add(Tags.Damage_Resistance_Lightning, LightningResistanceDef);
-		TagsToCaptureDefs.Add(Tags.Damage_Resistance_Arcane, ArcaneResistanceDef);
-		TagsToCaptureDefs.Add(Tags.Damage_Resistance_Physical, PhysicalResistanceDef);
-
-		bTagsToCaptureDefsInitialized = true;
-	}
-
 	AuraDamageStatics()
 	{
 		/** 
@@ -89,8 +57,6 @@ struct AuraDamageStatics
 		DEFINE_ATTRIBUTE_CAPTUREDEF(UAuraAttributeSet, LightningResistance, Target, false);
 		DEFINE_ATTRIBUTE_CAPTUREDEF(UAuraAttributeSet, ArcaneResistance, Target, false);
 		DEFINE_ATTRIBUTE_CAPTUREDEF(UAuraAttributeSet, PhysicalResistance, Target, false);
-		// 注意：不要在构造函数里初始化 TagsToCaptureDefs。
-		// ExecCalc 的 CDO/静态对象可能会早于 GameplayTags 初始化，从而导致 Map 不匹配。
 	}
 };
 
@@ -105,11 +71,76 @@ static const AuraDamageStatics& DamageStatics()
 	return DStatics;
 }
 
+// 根据 Spec 中实际存在的伤害类型，判断对应 Debuff 是否触发。
+static void DetermineDebuff(
+	const FGameplayEffectCustomExecutionParameters& ExecutionParams,
+	const FGameplayEffectSpec& Spec,
+	const FAggregatorEvaluateParameters& EvaluationParameters,
+	const TMap<FGameplayTag, FGameplayEffectAttributeCaptureDefinition>& TagsToCaptureDefs)
+{
+	const FAuraGameplayTags& GameplayTags = FAuraGameplayTags::Get();
+	for (const TPair<FGameplayTag, FGameplayTag>& Pair : GameplayTags.DamageTypesToDebuffs)
+	{
+		const FGameplayTag& DamageType = Pair.Key;
+		const FGameplayTag& DebuffType = Pair.Value;
+
+		// 未被当前 Spec 设置的伤害类型返回 -1；只有实际造成的伤害类型才参与判定。
+		const float TypeDamage = Spec.GetSetByCallerMagnitude(DamageType, false, -1.f);
+		if (TypeDamage <= -1.f)
+		{
+			continue;
+		}
+
+		const float SourceDebuffChance =
+			Spec.GetSetByCallerMagnitude(GameplayTags.Debuff_Chance, false, -1.f);
+		if (SourceDebuffChance <= 0.f)
+		{
+			continue;
+		}
+
+		const FGameplayTag& ResistanceTag = GameplayTags.DamageTypesToResistances.FindChecked(DamageType);
+		const FGameplayEffectAttributeCaptureDefinition* CaptureDef = TagsToCaptureDefs.Find(ResistanceTag);
+		checkf(CaptureDef, TEXT("Resistance tag %s has no matching capture definition while determining debuff %s"),
+			*ResistanceTag.ToString(), *DebuffType.ToString());
+
+		float TargetDebuffResistance = 0.f;
+		ExecutionParams.AttemptCalculateCapturedAttributeMagnitude(
+			*CaptureDef, EvaluationParameters, TargetDebuffResistance);
+		TargetDebuffResistance = FMath::Max(TargetDebuffResistance, 0.f);
+
+		// 每 1 点对应抗性降低 1% 的 Debuff 触发概率。
+		const float EffectiveDebuffChance = SourceDebuffChance * (100.f - TargetDebuffResistance) / 100.f;
+		const bool bDebuff = FMath::RandRange(1, 100) < EffectiveDebuffChance;
+		if (bDebuff)
+		{
+			FGameplayEffectContextHandle ContextHandle = Spec.GetContext();
+			UAuraAbilitySystemLibrary::SetIsSuccessfulDebuff(ContextHandle, true);
+			UAuraAbilitySystemLibrary::SetDamageType(ContextHandle, DamageType);
+
+			// 这些值已经由 ApplyDamageEffect 写入 Spec，此处转存到 Context 供 AttributeSet 使用。
+			const float DebuffDamage =
+				Spec.GetSetByCallerMagnitude(GameplayTags.Debuff_Damage, false, -1.f);
+			const float DebuffDuration =
+				Spec.GetSetByCallerMagnitude(GameplayTags.Debuff_Duration, false, -1.f);
+			const float DebuffFrequency =
+				Spec.GetSetByCallerMagnitude(GameplayTags.Debuff_Frequency, false, -1.f);
+			UAuraAbilitySystemLibrary::SetDebuffDamage(ContextHandle, DebuffDamage);
+			UAuraAbilitySystemLibrary::SetDebuffDuration(ContextHandle, DebuffDuration);
+			UAuraAbilitySystemLibrary::SetDebuffFrequency(ContextHandle, DebuffFrequency);
+			return;
+		}
+	}
+}
+
 UExecCalc_Damage::UExecCalc_Damage()
 {
 	/** 
+	 * 1. 在结构体中声明捕获定义
+	 * 2. 在构造函数中定义并注册捕获规则
+	 * 3. 在 Execute_Implementation 中读取捕获到的属性值
+	 *
 	 * 在 Execution 类的构造函数中，把你定义好的捕获规则添加到 RelevantAttributesToCapture 数组。
-	 * 这里告诉 GAS 系统：“在真正执行计算逻辑前，请帮我把目标(Target)的护甲(Armor)数据准备好！”
+	 * 这里告诉 GAS 系统："在真正执行计算逻辑前，请帮我把目标(Target)的护甲(Armor)数据准备好！"
 	 */
 	RelevantAttributesToCapture.Add(DamageStatics().ArmorDef);
 	RelevantAttributesToCapture.Add(DamageStatics().BlockChanceDef);
@@ -128,11 +159,6 @@ UExecCalc_Damage::UExecCalc_Damage()
 void UExecCalc_Damage::Execute_Implementation(const FGameplayEffectCustomExecutionParameters& ExecutionParams,
 	FGameplayEffectCustomExecutionOutput& OutExecutionOutput) const
 {
-	// 确保抗性Tag->CaptureDef 映射在 GameplayTags 初始化后再构建。
-	DamageStatics().InitTagsToCaptureDefs();
-	ensureMsgf(DamageStatics().bTagsToCaptureDefsInitialized,
-		TEXT("AuraDamageStatics::TagsToCaptureDefs not initialized yet. Ensure FAuraGameplayTags::InitializeNativeGameplayTags() is called before applying damage effects."));
-
 	const UAbilitySystemComponent* SourceASC = ExecutionParams.GetSourceAbilitySystemComponent();
 	const UAbilitySystemComponent* TargetASC = ExecutionParams.GetTargetAbilitySystemComponent();
 	
@@ -152,8 +178,19 @@ void UExecCalc_Damage::Execute_Implementation(const FGameplayEffectCustomExecuti
 	FAggregatorEvaluateParameters EvaluationParameters;
 	EvaluationParameters.SourceTags = SourceTags;
 	EvaluationParameters.TargetTags = TargetTags;
+
+	const FAuraGameplayTags& GameplayTags = FAuraGameplayTags::Get();
+	// 局部建立映射，避免静态 ExecCalc 对象早于 Native GameplayTags 初始化。
+	TMap<FGameplayTag, FGameplayEffectAttributeCaptureDefinition> TagsToCaptureDefs;
+	TagsToCaptureDefs.Add(GameplayTags.Damage_Resistance_Fire, DamageStatics().FireResistanceDef);
+	TagsToCaptureDefs.Add(GameplayTags.Damage_Resistance_Lightning, DamageStatics().LightningResistanceDef);
+	TagsToCaptureDefs.Add(GameplayTags.Damage_Resistance_Arcane, DamageStatics().ArcaneResistanceDef);
+	TagsToCaptureDefs.Add(GameplayTags.Damage_Resistance_Physical, DamageStatics().PhysicalResistanceDef);
 	
 	FGameplayEffectContextHandle EffectContextHandle = Spec.GetContext();
+
+	// 成功时 DetermineDebuff 会把结果写进当前 Spec 的 EffectContext。
+	DetermineDebuff(ExecutionParams, Spec, EvaluationParameters, TagsToCaptureDefs);
 	// 从 EffectContextHandle 里读取是否格挡/暴击的字段，这些字段是我们在自定义 EffectContext 里添加的，并通过 NetSerialize 同步到客户端的。
 	
 	
@@ -168,12 +205,12 @@ void UExecCalc_Damage::Execute_Implementation(const FGameplayEffectCustomExecuti
 		FGameplayTag DamageTag = Pair.Key;
 		FGameplayTag ResistanceTag = Pair.Value;
 		
-		checkf(DamageStatics().TagsToCaptureDefs.Contains(ResistanceTag),
-			TEXT("DamageType %s does not have a corresponding CaptureDef for resistance tag %s. (TagsToCaptureDefs Num=%d) Please add it to AuraDamageStatics::InitTagsToCaptureDefs()."),
-			*DamageTag.ToString(), *ResistanceTag.ToString(), DamageStatics().TagsToCaptureDefs.Num());
+		checkf(TagsToCaptureDefs.Contains(ResistanceTag),
+			TEXT("DamageType %s does not have a corresponding CaptureDef for resistance tag %s. (TagsToCaptureDefs Num=%d)"),
+			*DamageTag.ToString(), *ResistanceTag.ToString(), TagsToCaptureDefs.Num());
 		
 		// 用 FindChecked：1) const 安全；2) 缺失时会直接 assert，定位更清晰
-		const FGameplayEffectAttributeCaptureDefinition& CaptureDef = DamageStatics().TagsToCaptureDefs.FindChecked(ResistanceTag);
+		const FGameplayEffectAttributeCaptureDefinition& CaptureDef = TagsToCaptureDefs.FindChecked(ResistanceTag);
 		
 		float DamageTypeValue =  Spec.GetSetByCallerMagnitude(Pair.Key, false);//从 GE 的 SetByCaller 里获取这个伤害类型的伤害值,没有返回 0
 		

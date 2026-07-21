@@ -145,101 +145,12 @@ void UAuraAttributeSet::PostGameplayEffectExecute(const struct FGameplayEffectMo
 	
 	if (Data.EvaluatedData.Attribute == GetIncomingDamageAttribute())
 	{
-		const float LocalIncomingDamage = GetIncomingDamage();
-		SetIncomingDamage(0.f);
-		if (LocalIncomingDamage >= 0)
-		{
-			const float NewHealth = GetHealth() - LocalIncomingDamage;
-			SetHealth(FMath::Clamp(NewHealth, 0.f, GetMaxHealth()));
-			
-			const bool bFatal = NewHealth <= 0.f;
-			
-			if (bFatal)
-			{
-				ICombatInterface* CombatInterface = Cast<ICombatInterface>(Props.TargetAvatarActor);
-				if (CombatInterface != nullptr)
-				{
-					CombatInterface->Die();
-				}
-				
-				SendXPEvent(Props);
-			}
-			else
-			{
-				FGameplayTagContainer TagContainer;
-				TagContainer.AddTag(FAuraGameplayTags::Get().Effect_HitReact);
-				Props.TargetASC->TryActivateAbilitiesByTag(TagContainer);//根据标签触发受击反应能力
-			}
-			
-			FGameplayEffectContextHandle EffectContextHandle = Props.EffectContextHandle;
-			bool bIsBlockedHit = UAuraAbilitySystemLibrary::IsBlockedHit(EffectContextHandle);
-			bool bIsCriticalHit = UAuraAbilitySystemLibrary::IsCriticalHit(EffectContextHandle);
-			
-			
-			ShowFloatingText(Props, LocalIncomingDamage, bIsBlockedHit, bIsCriticalHit);
-			
-		}
+		HandleIncomingDamage(Props);
 	}
 	
 	if (Data.EvaluatedData.Attribute == GetIncomingXPAttribute())
 	{
-		const float LocalIncomingXP = GetIncomingXP();
-		SetIncomingXP(0.f);
-		
-		// 来源就是自己， 因为 技能里 触发 ge 修改自己的 IncomingXP
-		if (Props.SourceCharacter->Implements<UPlayerInterface>() && Props.SourceCharacter->Implements<UCombatInterface>())
-		{
-			const int32 CurrentXP = IPlayerInterface::Execute_GetXP(Props.SourceCharacter);
-			const int32 CurentLevel = ICombatInterface::Execute_GetPlayerLevel(Props.SourceCharacter);
-			
-			int32 NewLevel = IPlayerInterface::Execute_FindLevelForXP(Props.SourceCharacter, CurrentXP + LocalIncomingXP);
-			int32 NumLevelUps = NewLevel - CurentLevel;
-			
-			if (NumLevelUps > 0)
-			{
-				int32 AttributePointsReward = 0;
-				int32 SpellPointsReward = 0;
-				// 奖励按“跨过的等级门槛”累计：1->2 取 LevelUpInformation[1]，2->3 取 [2]。
-				for (int32 Level = CurentLevel; Level < NewLevel; ++Level)
-				{
-					AttributePointsReward += IPlayerInterface::Execute_GetAttributePointsReward(Props.SourceCharacter, Level);
-					SpellPointsReward += IPlayerInterface::Execute_GetSpellPointsReward(Props.SourceCharacter, Level);
-				}
-				
-				IPlayerInterface::Execute_AddToPlayerLevel(Props.SourceCharacter, NumLevelUps);
-				IPlayerInterface::Execute_AddToAttributePoints(Props.SourceCharacter, AttributePointsReward);
-				IPlayerInterface::Execute_AddToSpellPoints(Props.SourceCharacter, SpellPointsReward);
-				
-				bTopOffHealth = true;
-				bTopOffMana = true;
-				
-				// Level 存在 PlayerState，不是 captured Attribute；升级后广播外部依赖，让 MMC 重新读取 Level。
-				if (ICombatInterface* CombatInterface = Cast<ICombatInterface>(Props.SourceCharacter))
-				{
-					if (FOnExternalGameplayModifierDependencyChange* ExternalDelegate = CombatInterface->GetExternalGameplayModifierDependencyMulticast())
-					{
-						ExternalDelegate->Broadcast();
-					}
-				}
-
-				// 如果 MaxHealth/MaxMana 没有变化，PostAttributeChange 不会补满；这里至少回满到当前上限。
-				if (bTopOffHealth)
-				{
-					SetHealth(GetMaxHealth());
-					bTopOffHealth = false;
-				}
-				if (bTopOffMana)
-				{
-					SetMana(GetMaxMana());
-					bTopOffMana = false;
-				}
-				
-				IPlayerInterface::Execute_LevelUp(Props.SourceCharacter);
-			}
-			
-			IPlayerInterface::Execute_AddToXP(Props.SourceCharacter, LocalIncomingXP);// source是玩家，因为攻击是由玩家发起的
-			//里面有广播
-		}
+		HandleIncomingXP(Props);
 	}
 	
 	 /* 这里限制 base value
@@ -248,8 +159,114 @@ void UAuraAttributeSet::PostGameplayEffectExecute(const struct FGameplayEffectMo
 	*/
 }
 
+void UAuraAttributeSet::HandleIncomingDamage(const FEffectProperties& Props)
+{
+	const float LocalIncomingDamage = GetIncomingDamage();
+	SetIncomingDamage(0.f);
+	if (LocalIncomingDamage < 0.f)
+	{
+		return;
+	}
 
-void UAuraAttributeSet::ShowFloatingText(FEffectProperties& Props, float Damage, bool bIsBlockedHit, bool bIsCriticalHit)
+	const float NewHealth = GetHealth() - LocalIncomingDamage;
+	SetHealth(FMath::Clamp(NewHealth, 0.f, GetMaxHealth()));
+	const bool bFatal = NewHealth <= 0.f;
+
+	if (bFatal)
+	{
+		if (ICombatInterface* CombatInterface = Cast<ICombatInterface>(Props.TargetAvatarActor))
+		{
+			CombatInterface->Die();
+		}
+		SendXPEvent(Props);
+	}
+	else
+	{
+		FGameplayTagContainer TagContainer;
+		TagContainer.AddTag(FAuraGameplayTags::Get().Effect_HitReact);
+		Props.TargetASC->TryActivateAbilitiesByTag(TagContainer);
+	}
+
+	const bool bIsBlockedHit = UAuraAbilitySystemLibrary::IsBlockedHit(Props.EffectContextHandle);
+	const bool bIsCriticalHit = UAuraAbilitySystemLibrary::IsCriticalHit(Props.EffectContextHandle);
+	ShowFloatingText(Props, LocalIncomingDamage, bIsBlockedHit, bIsCriticalHit);
+
+	// ExecCalc 已把成功判定和所有参数写进同一个 EffectContext。
+	if (UAuraAbilitySystemLibrary::IsSuccessfulDebuff(Props.EffectContextHandle))
+	{
+		Debuff(Props);
+	}
+}
+
+void UAuraAttributeSet::HandleIncomingXP(const FEffectProperties& Props)
+{
+	const float LocalIncomingXP = GetIncomingXP();
+	SetIncomingXP(0.f);
+
+	// XP GameplayEffect 由玩家应用给自己，因此 SourceCharacter 就是获得经验的角色。
+	if (!Props.SourceCharacter ||
+		!Props.SourceCharacter->Implements<UPlayerInterface>() ||
+		!Props.SourceCharacter->Implements<UCombatInterface>())
+	{
+		return;
+	}
+
+	const int32 CurrentXP = IPlayerInterface::Execute_GetXP(Props.SourceCharacter);
+	const int32 CurrentLevel = ICombatInterface::Execute_GetPlayerLevel(Props.SourceCharacter);
+	const int32 NewLevel =
+		IPlayerInterface::Execute_FindLevelForXP(Props.SourceCharacter, CurrentXP + LocalIncomingXP);
+	const int32 NumLevelUps = NewLevel - CurrentLevel;
+
+	if (NumLevelUps > 0)
+	{
+		int32 AttributePointsReward = 0;
+		int32 SpellPointsReward = 0;
+		for (int32 Level = CurrentLevel; Level < NewLevel; ++Level)
+		{
+			AttributePointsReward +=
+				IPlayerInterface::Execute_GetAttributePointsReward(Props.SourceCharacter, Level);
+			SpellPointsReward +=
+				IPlayerInterface::Execute_GetSpellPointsReward(Props.SourceCharacter, Level);
+		}
+
+		IPlayerInterface::Execute_AddToPlayerLevel(Props.SourceCharacter, NumLevelUps);
+		IPlayerInterface::Execute_AddToAttributePoints(Props.SourceCharacter, AttributePointsReward);
+		IPlayerInterface::Execute_AddToSpellPoints(Props.SourceCharacter, SpellPointsReward);
+
+		bTopOffHealth = true;
+		bTopOffMana = true;
+		if (ICombatInterface* CombatInterface = Cast<ICombatInterface>(Props.SourceCharacter))
+		{
+			if (FOnExternalGameplayModifierDependencyChange* ExternalDelegate =
+				CombatInterface->GetExternalGameplayModifierDependencyMulticast())
+			{
+				ExternalDelegate->Broadcast();
+			}
+		}
+
+		if (bTopOffHealth)
+		{
+			SetHealth(GetMaxHealth());
+			bTopOffHealth = false;
+		}
+		if (bTopOffMana)
+		{
+			SetMana(GetMaxMana());
+			bTopOffMana = false;
+		}
+		IPlayerInterface::Execute_LevelUp(Props.SourceCharacter);
+	}
+
+	IPlayerInterface::Execute_AddToXP(Props.SourceCharacter, LocalIncomingXP);
+}
+
+void UAuraAttributeSet::Debuff(const FEffectProperties& Props)
+{
+	// 下一节将在这里根据 Context 中的 DamageType、Damage、Duration 和 Frequency 动态创建 GE。
+}
+
+
+void UAuraAttributeSet::ShowFloatingText(const FEffectProperties& Props, float Damage, bool bIsBlockedHit, bool bIsCriticalHit)
 {
 	if (Props.TargetCharacter != Props.SourceCharacter)
 	{
@@ -272,7 +289,7 @@ void UAuraAttributeSet::ShowFloatingText(FEffectProperties& Props, float Damage,
 	}
 }
 
-void UAuraAttributeSet::SendXPEvent(FEffectProperties& Props)
+void UAuraAttributeSet::SendXPEvent(const FEffectProperties& Props)
 {
 	if (Props.TargetCharacter && Props.TargetCharacter->Implements<UCombatInterface>())
 	{

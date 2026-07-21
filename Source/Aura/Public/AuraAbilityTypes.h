@@ -72,11 +72,21 @@ struct FAuraGameplayEffectContext : public FGameplayEffectContext
 	bool IsBlockedHit() const { return bIsBlockedHit; }
 	/** 是否发生暴击（用于客户端显示/逻辑判断） */
 	bool IsCriticalHit() const { return bIsCriticalHit; }
+	bool IsSuccessfulDebuff() const { return bIsSuccessfulDebuff; }
+	float GetDebuffDamage() const { return DebuffDamage; }
+	float GetDebuffDuration() const { return DebuffDuration; }
+	float GetDebuffFrequency() const { return DebuffFrequency; }
+	TSharedPtr<FGameplayTag> GetDamageType() const { return DamageType; }
 	
 	/** 设置是否格挡（一般在服务端伤害结算时写入） */
 	void SetBlockedHit(bool bInIsBlockedHit) { bIsBlockedHit = bInIsBlockedHit; }
 	/** 设置是否暴击（一般在服务端伤害结算时写入） */
 	void SetCriticalHit(bool bInIsCriticalHit) { bIsCriticalHit = bInIsCriticalHit; }
+	void SetIsSuccessfulDebuff(bool bInIsSuccessfulDebuff) { bIsSuccessfulDebuff = bInIsSuccessfulDebuff; }
+	void SetDebuffDamage(float InDebuffDamage) { DebuffDamage = InDebuffDamage; }
+	void SetDebuffDuration(float InDebuffDuration) { DebuffDuration = InDebuffDuration; }
+	void SetDebuffFrequency(float InDebuffFrequency) { DebuffFrequency = InDebuffFrequency; }
+	void SetDamageType(const FGameplayTag& InDamageType) { DamageType = MakeShared<FGameplayTag>(InDamageType); }
 	
 	/**
 	 * 创建该 Context 的拷贝。
@@ -95,12 +105,16 @@ struct FAuraGameplayEffectContext : public FGameplayEffectContext
 			// Does a deep copy of the hit result
 			NewContext->AddHitResult(*GetHitResult(), true);
 		}
+		if (DamageType.IsValid())
+		{
+			// DamageType 也是共享指针，复制 Context 时避免新旧 Context 共用同一份数据。
+			NewContext->DamageType = MakeShared<FGameplayTag>(*DamageType);
+		}
 		return NewContext;
 	}
 	
 	/**
 	 * 自定义网络序列化（NetSerialize）。
-	 *
 	 * 重要：
 	 * - 必须同时序列化父类字段（Instigator/EffectCauser/HitResult...）以及我们新增的字段
 	 * - 读/写两端的字段顺序必须完全一致
@@ -110,6 +124,7 @@ struct FAuraGameplayEffectContext : public FGameplayEffectContext
 	/**
 	 * 返回该 Context 的实际 UScriptStruct。
 	 * 这会影响引擎在（反）序列化时将其识别为“哪个结构体类型”。
+	 *
 	 * 对于子类 Context，应返回自己的 StaticStruct()。
 	 */
 	virtual UScriptStruct* GetScriptStruct() const override
@@ -129,11 +144,25 @@ protected:
 	/** 是否暴击（同上） */
 	UPROPERTY()
 	bool bIsCriticalHit = false;
+
+	UPROPERTY()
+	bool bIsSuccessfulDebuff = false;
+
+	UPROPERTY()
+	float DebuffDamage = 0.f;
+
+	UPROPERTY()
+	float DebuffDuration = 0.f;
+
+	UPROPERTY()
+	float DebuffFrequency = 0.f;
+
+	// FGameplayTag 自己支持 NetSerialize；共享指针允许在反序列化时按需创建实例。
+	TSharedPtr<FGameplayTag> DamageType;
 };
 
 /**
  * 为该 USTRUCT 指定额外的“结构体操作特性”。
- *
  * - WithNetSerializer = true：告诉引擎使用我们自定义的 NetSerialize。
  * - WithCopy = true：允许安全拷贝（对于含有 TSharedPtr<FHitResult> 的基类数据很关键）。
  */

@@ -277,8 +277,11 @@ private:
 	
 	// 从 Data 里解析 Source/Target 相关对象并填充到 Props（内部会做 Cast/判空）。
 	void SetEffectProperties(const struct FGameplayEffectModCallbackData& Data, FEffectProperties& Props);
+	void HandleIncomingDamage(const FEffectProperties& Props);
+	void HandleIncomingXP(const FEffectProperties& Props);
+	void Debuff(const FEffectProperties& Props);
 	
-	void ShowFloatingText(FEffectProperties& Props, float Damage, bool bIsBlockedHit, bool bIsCriticalHit);
+	void ShowFloatingText(const FEffectProperties& Props, float Damage, bool bIsBlockedHit, bool bIsCriticalHit);
 	
-	void SendXPEvent(FEffectProperties& Props);
+	void SendXPEvent(const FEffectProperties& Props);
 };

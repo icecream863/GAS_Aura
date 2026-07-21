@@ -34,7 +34,8 @@ void UAuraDamageGameplayAbility::CauseDamage(AActor* TargetActor)
 		DamageType,
 		Damage.GetValueAtLevel(GetAbilityLevel()));
 	
-	GetAbilitySystemComponentFromActorInfo()->ApplyGameplayEffectSpecToTarget(*DamageEffectSpecHandle.Data.Get(), UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(TargetActor));
+	GetAbilitySystemComponentFromActorInfo()->ApplyGameplayEffectSpecToTarget(*DamageEffectSpecHandle.Data.Get(),
+		UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(TargetActor));
 }
 
 FTaggedMontage UAuraDamageGameplayAbility::GetRandomTaggedMontageFromArray(

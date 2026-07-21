@@ -34,6 +34,9 @@ bool FAuraGameplayEffectContext::NetSerialize(FArchive& Ar, class UPackageMap* M
 		//   bit6: WorldOrigin
 		//   bit7: bIsBlockedHit   (自定义)
 		//   bit8: bIsCriticalHit  (自定义)
+		//   bit9: bIsSuccessfulDebuff
+		//   bit10-12: DebuffDamage / Duration / Frequency
+		//   bit13: DamageType
 		*/
 		if (bReplicateInstigator && Instigator.IsValid())
 		{
@@ -71,13 +74,33 @@ bool FAuraGameplayEffectContext::NetSerialize(FArchive& Ar, class UPackageMap* M
 		{
 			RepBits |= 1 << 8;
 		}
+		if (bIsSuccessfulDebuff)
+		{
+			RepBits |= 1 << 9;
+		}
+		if (DebuffDamage > 0.f)
+		{
+			RepBits |= 1 << 10;
+		}
+		if (DebuffDuration > 0.f)
+		{
+			RepBits |= 1 << 11;
+		}
+		if (DebuffFrequency > 0.f)
+		{
+			RepBits |= 1 << 12;
+		}
+		if (DamageType.IsValid())
+		{
+			RepBits |= 1 << 13;
+		}
 	}
 
 	// ------------------------------------------------------------
-	// 2) 先序列化位掩码本身（固定 9 位）
+	// 2) 先序列化位掩码本身。最高使用 bit13，因此总共需要 14 位。
 	//    Loading 时会先把 RepBits 读回来，后续就知道要读哪些字段。
 	// ------------------------------------------------------------
-	Ar.SerializeBits(&RepBits, 9);
+	Ar.SerializeBits(&RepBits, 14);
 	
 	// ------------------------------------------------------------
 	// 3) 根据 RepBits 序列化/反序列化各字段（顺序必须固定），可以知道 Ar.IsSaving() Ar.IsLoading(): 
@@ -139,6 +162,30 @@ bool FAuraGameplayEffectContext::NetSerialize(FArchive& Ar, class UPackageMap* M
 	{
 		// 同上：bit8 已经表示“bIsCriticalHit=true”。
 		Ar << bIsCriticalHit;
+	}
+	if (RepBits & (1 << 9))
+	{
+		Ar << bIsSuccessfulDebuff;
+	}
+	if (RepBits & (1 << 10))
+	{
+		Ar << DebuffDamage;
+	}
+	if (RepBits & (1 << 11))
+	{
+		Ar << DebuffDuration;
+	}
+	if (RepBits & (1 << 12))
+	{
+		Ar << DebuffFrequency;
+	}
+	if (RepBits & (1 << 13))
+	{
+		if (Ar.IsLoading() && !DamageType.IsValid())
+		{
+			DamageType = MakeShared<FGameplayTag>();
+		}
+		DamageType->NetSerialize(Ar, Map, bOutSuccess);
 	}
 
 	if (Ar.IsLoading())

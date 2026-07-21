@@ -50,13 +50,13 @@ void AAuraProjectile::BeginPlay()
 }
 
 /**
- * 这是在客户端销毁时补播命中效果的兜底：只有在未命中且非服务器时播放音效与特效，
- * 避免服务器与命中回调里重复触发。`Super::Destroyed()` 保证基类销毁逻辑正常执行
+ * 服务器销毁复制的投射物时，客户端不一定已经触发了本地的重叠回调。
+ * 如果当前客户端还没播放过命中反馈，就在 Actor 销毁前补播一次。
+ * bHit 是每个网络实例各自维护的本地防重标记，不是复制变量。
  */
 void AAuraProjectile::Destroyed()
 {
-	//- 1.先接收Destroy, 没有触发重叠回调（即未命中）发出音效，且当前不是服务器（即客户端），则补播特效与音效。
-	//- 2.先接受重叠回调，触发命中逻辑（包括销毁），则 bHit 会被设置为 true，Destroyed 里就不会补播特效与音效，避免重复。
+	// 仅为尚未处理命中反馈的客户端补播；服务器的命中逻辑已在 OnSphereOverlap 中执行。
 	if (!bHit && !HasAuthority())
 	{
 		OnHit();
@@ -67,28 +67,30 @@ void AAuraProjectile::Destroyed()
 
 void AAuraProjectile::OnHit()
 {
+	// 只处理当前机器上的命中表现；伤害始终由服务器在 OnSphereOverlap 中结算。
 	UGameplayStatics::PlaySoundAtLocation(this, ImpactSound, GetActorLocation());
 	UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, ImpactEffect, GetActorLocation());
 	if (LoopingSoundComponent) LoopingSoundComponent->Stop();
+	// 防止本地重叠回调与 Destroyed 兜底重复播放命中反馈。
 	bHit = true;
 }
 
 void AAuraProjectile::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
                                       UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	AActor* SourceAvatarActor = DamageEffectParams.SourceAbilitySystemComponent
-		? DamageEffectParams.SourceAbilitySystemComponent->GetAvatarActor()
-		: nullptr;
+	AActor* SourceAvatarActor = DamageEffectParams.SourceAbilitySystemComponent ?
+	DamageEffectParams.SourceAbilitySystemComponent->GetAvatarActor() : nullptr;
 	if (!SourceAvatarActor || SourceAvatarActor == OtherActor)
 	{
-		return;// 忽略自己（施法者）的重叠判定
+		return; // 没有有效的伤害来源，或投射物碰到了施法者自己。
 	}
 	
 	if (!UAuraAbilitySystemLibrary::IsNotFriend(SourceAvatarActor, OtherActor))
 	{
-		return;// 忽略友方（队友/自己）的重叠判定
+		return; // 友方目标不触发命中。
 	}
 	
+	// 每个网络实例只播放一次本地命中反馈。
 	if (!bHit)
 	{
 		OnHit();
@@ -97,18 +99,19 @@ void AAuraProjectile::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, 
 	
 	if (HasAuthority())
 	{	
+		// 目标只有在命中时才能确定；只有服务器可以设置目标 ASC 并结算伤害。
 		if (UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(OtherActor))
 		{
-			// 目标只有在命中时才确定，因此现在才补上 Target ASC 再统一应用伤害。
 			DamageEffectParams.TargetAbilitySystemComponent = TargetASC;
 			UAuraAbilitySystemLibrary::ApplyDamageEffect(DamageEffectParams);
 		}
 		
+		// 服务器销毁复制 Actor，客户端随后会收到销毁通知。
 		Destroy();
 	}
-	else//客户端
+	else // 客户端
 	{
-		//这行 bHit = true; 记录客户端已发生命中，用于 Destroyed() 里判断是否需要补播特效与音效，避免与命中回调重复触发。
+		// 客户端不结算伤害、不主动销毁 Actor，只记录本地已处理命中反馈。
 		bHit = true;
 	}
 }
