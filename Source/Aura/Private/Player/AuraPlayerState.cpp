@@ -17,7 +17,7 @@ AAuraPlayerState::AAuraPlayerState()
 	//创建AS
 	AttributeSet = CreateDefaultSubobject<UAuraAttributeSet>("AttributeSet");
 	
-	NetUpdateFrequency = 100.f;
+	SetNetUpdateFrequency(100.f);
 }
 
 UAbilitySystemComponent* AAuraPlayerState::GetAbilitySystemComponent() const

@@ -7,6 +7,7 @@
 #include "AbilitySystemComponent.h"
 #include "AuraAbilityTypes.h"
 #include "AuraGameplayTags.h"
+#include "Engine/OverlapResult.h"
 #include "GameplayEffectTypes.h"
 #include "Game/AuraGameModeBase.h"
 #include "Interaction/CombatInterface.h"
