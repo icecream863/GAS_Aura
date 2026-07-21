@@ -9,3 +9,29 @@ Build/
 Plugins/Developer/RiderLink/
 .vs/
 .claude/settings.local.json
+
+# Generated data inside project plugins
+Plugins/**/Binaries/
+Plugins/**/DerivedDataCache/
+Plugins/**/Intermediate/
+Plugins/**/Saved/
+
+# Additional IDE and build-system generated files
+.vscode/.browse.VC.db*
+.vscode/ipch/
+*.opensdf
+*.sdf
+*.VC.db
+*.VC.opendb
+*.xcodeproj/
+
+# Local AI/MCP client configuration
+.codex/config.toml
+.mcp.json
+.cursor/mcp.json
+.vscode/mcp.json
+
+# Operating-system files
+.DS_Store
+Thumbs.db
+Desktop.ini
